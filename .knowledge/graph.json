@@ -1,0 +1,76 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "lastModified": "2026-02-02T00:00:00.000Z",
+    "entityCount": 5,
+    "relationCount": 0
+  },
+  "entities": {
+    "project:WEB-INV-001": {
+      "id": "project:WEB-INV-001",
+      "type": "project-context",
+      "name": "Web Investigation プロジェクト",
+      "description": "生産技術×デジタル関連の技術情報をWebスリーピングし、要約してメール配信するアプリケーション",
+      "properties": {
+        "stack": ["Next.js", "TypeScript", "Tailwind CSS", "Shadcn/UI", "Prisma", "PostgreSQL"],
+        "structure": "src/app, src/components, src/lib, src/hooks, src/types"
+      },
+      "tags": ["nextjs", "production-technology", "digital"],
+      "createdAt": "2026-02-02T00:00:00.000Z",
+      "updatedAt": "2026-02-02T00:00:00.000Z"
+    },
+    "rule:CODE-STYLE-001": {
+      "id": "rule:CODE-STYLE-001",
+      "type": "coding-standard",
+      "name": "コンポーネント・アイコン",
+      "description": "UIコンポーネントのアイコンは lucide-react を使用する",
+      "properties": {
+        "iconLibrary": "lucide-react",
+        "enforced": true
+      },
+      "tags": ["components", "icons", "lucide-react"],
+      "createdAt": "2026-02-02T00:00:00.000Z",
+      "updatedAt": "2026-02-02T00:00:00.000Z"
+    },
+    "rule:CODE-STYLE-002": {
+      "id": "rule:CODE-STYLE-002",
+      "type": "coding-standard",
+      "name": "レスポンシブ対応",
+      "description": "UIはレスポンシブ対応を前提に設計する（Tailwind の sm/md/lg 等を活用）",
+      "properties": {
+        "enforced": true
+      },
+      "tags": ["responsive", "tailwind", "ui"],
+      "createdAt": "2026-02-02T00:00:00.000Z",
+      "updatedAt": "2026-02-02T00:00:00.000Z"
+    },
+    "domain:PT-DIGITAL-001": {
+      "id": "domain:PT-DIGITAL-001",
+      "type": "domain-term",
+      "name": "生産技術×デジタル",
+      "description": "本アプリが収集・要約・配信する技術情報のドメイン。製造・生産技術とデジタル化（IoT, AI, データ活用等）の交差点",
+      "properties": {
+        "domain": "production-technology-digital"
+      },
+      "tags": ["domain", "production-technology", "digital"],
+      "createdAt": "2026-02-02T00:00:00.000Z",
+      "updatedAt": "2026-02-02T00:00:00.000Z"
+    },
+    "arch:ADR-001": {
+      "id": "arch:ADR-001",
+      "type": "architecture-decision",
+      "name": "Next.js App Router + src 構成",
+      "description": "Next.js App Router を採用し、src/ 配下に app, components, lib, hooks, types を配置",
+      "properties": {
+        "status": "accepted",
+        "date": "2026-02-02",
+        "context": "Webスリーピング・要約・メール配信アプリの基盤構成",
+        "decision": "Next.js (App Router), TypeScript, Tailwind, Shadcn/UI, Prisma, PostgreSQL"
+      },
+      "tags": ["architecture", "nextjs", "app-router"],
+      "createdAt": "2026-02-02T00:00:00.000Z",
+      "updatedAt": "2026-02-02T00:00:00.000Z"
+    }
+  },
+  "relations": []
+}

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "musubix": {
+      "command": "/mnt/c/Program Files/nodejs/node.exe",
+      "args": ["node_modules/@nahisaho/musubix-mcp-server/bin/musubix-mcp.js", "--transport", "stdio"],
+      "cwd": "/home/kmilek/dev-env/web-investigation",
+      "env": {}
+    },
+    "supabase": {
+      "url": "https://mcp.supabase.com/mcp?project_ref=eanxmobszkkkiemdvjbm"
+    }
+  }
+}
