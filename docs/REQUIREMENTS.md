@@ -1,8 +1,9 @@
 # Web Investigation 要求定義書
 
-**バージョン:** 1.2  
+**バージョン:** 1.4  
 **作成日:** 2026-02-02  
 **更新日:** 2026-02-02  
+**レビュー:** docs/REQUIREMENTS_REVIEW.md (2026-02-02)  
 **対象:** 生産技術×デジタル 技術情報 収集・要約・メール配信システム
 
 ---
@@ -28,7 +29,12 @@
 
 ## 2. 機能要件（EARS形式）
 
+### ユーザー価値
+本システムは、生産技術×デジタル関連の技術情報を自動収集・要約・配信することで、ユーザーが最新情報を効率的に把握できるようにする。手動での情報収集時間を削減し、重要な情報の見逃しを防ぐ。
+
 ### 2.1 収集（Scraping）
+
+**ユーザー価値:** 複数のWebサイトから技術情報を自動的に収集し、手動での情報収集時間を削減する。
 
 | ID | パターン | 要求 |
 |----|----------|------|
@@ -37,33 +43,57 @@
 | REQ-SCR-003 | Event-Driven | When a new source is added via Web UI, the system shall include it in the next scheduled scrape. |
 | REQ-SCR-004 | Unwanted Behavior | If a source is unreachable or returns an error, then the system shall log the failure and continue with other sources. |
 | REQ-SCR-005 | Ubiquitous | The system shall store each article with URL, title, raw content, and collected-at timestamp. |
-| REQ-SCR-006 | Ubiquitous | The system shall fetch articles by URL each time; if the same URL already exists and raw content has changed, the system shall update the record and regenerate the summary. |
+| REQ-SCR-006 | Ubiquitous | The system shall fetch articles by URL each time; if the same URL already exists and raw content has changed, the system shall update the record and mark the summary for regeneration (summary is set to null when content changes). |
 | REQ-SCR-007 | Ubiquitous | The system shall support two source types: (a) single-article URL, and (b) list-page URL from which multiple article URLs are extracted. |
 | REQ-SCR-008 | Ubiquitous | When the same article URL appears from multiple sources, the system shall treat it as one article and include it once in the output (e.g. email). |
 | REQ-SCR-009 | Ubiquitous | The system may process multiple sources in parallel during collection, subject to concurrent-scraping limits. |
 | REQ-SCR-010 | Ubiquitous | The system shall limit concurrent scraping to at most 3 sources at a time; within a source, the system shall fetch list and article pages sequentially or with at most 2 concurrent requests per source to avoid overloading target sites. |
 
+**受け入れ基準:**
+- 同時に実行されるスクレイピングタスクが最大3つであることをログで確認できる
+- ソース内のリクエストが直列または最大2並列であることをログで確認できる
+- 対象サイトへのリクエスト間隔が1200ms以上であることをログで確認できる
+
 ### 2.2 要約（LLM）
+
+**ユーザー価値:** 長文の技術記事を短い要約に変換し、素早く内容を把握できるようにする。
 
 | ID | パターン | 要求 |
 |----|----------|------|
-| REQ-SUM-001 | Event-Driven | When a new or updated article is collected, the system shall generate a summary using Claude (Anthropic). |
+| REQ-SUM-001 | Event-Driven | When a new article is collected or when an existing article's raw content has changed (summary is null), the system shall generate a summary using Claude (Anthropic). |
 | REQ-SUM-002 | Ubiquitous | The system shall store the summary with the article record. |
-| REQ-SUM-003 | Unwanted Behavior | If LLM summarization fails, then the system shall retry up to 3 times before marking the article as summarization-failed. |
+| REQ-SUM-003 | Unwanted Behavior | If LLM summarization fails after retrying up to 3 times with exponential backoff (1s, 2s, 4s), then the system shall leave the summary field as null and record the failure in the job run errors. |
 | REQ-SUM-004 | Ubiquitous | Where feasible, the system shall process summarization for multiple articles in parallel or in configurable batches to improve throughput. |
+
+**受け入れ基準:**
+- 新規記事または本文変更記事（summary=null）に対して要約が生成される
+- 要約失敗時は3回までリトライし、指数バックオフ（1s, 2s, 4s）で実行される
+- 要約失敗後はsummaryがnullのまま、JobRun.errorsにエラーが記録される
+- 複数記事の要約が並列またはバッチで処理される（実装で決定）
 
 ### 2.3 配信（Email）
 
+**ユーザー価値:** 収集・要約された記事を1通のメールで配信し、毎日の情報更新を確実に受け取れるようにする。
+
 | ID | パターン | 要求 |
 |----|----------|------|
-| REQ-EML-001 | Event-Driven | When the daily scheduled job completes, the system shall send one email containing all newly collected and summarized articles. |
+| REQ-EML-001 | Event-Driven | When the daily scheduled job completes, the system shall send one email containing all articles that were collected and successfully summarized during that job run (articles collected on the same day). |
 | REQ-EML-002 | Ubiquitous | The system shall send emails via a dedicated Gmail account (SMTP or Gmail API). |
 | REQ-EML-003 | Ubiquitous | The system shall include article title, summary, and URL in each email entry. |
-| REQ-EML-004 | State-Driven | While no new articles exist for the day, the system shall either skip sending an email or send a "no new articles" notification, according to user configuration. |
-| REQ-EML-005 | Unwanted Behavior | If email delivery fails, then the system shall log the error and optionally retry. |
+| REQ-EML-004 | State-Driven | When the daily job completes and no new articles were collected during that job run, the system shall either skip sending an email or send a "no new articles" notification, according to the emptySendBehavior setting. |
+| REQ-EML-005 | Unwanted Behavior | If email delivery fails, then the system shall log the error and retry up to 3 times with exponential backoff (1s, 2s, 4s) before recording the failure in job run errors. |
 | REQ-EML-006 | Event-Driven | When the daily job completes with one or more failures (source unreachable, summarization failed, email delivery failed), the system shall send a notification email to the configured recipient containing the failure details (e.g. source URL, article URL, error type, error message). |
 
+**受け入れ基準:**
+- ジョブ実行時に新規記事が収集・要約された場合、1通のメールにすべての記事が含まれる
+- メールには各記事のタイトル、要約、URLが含まれる
+- 0件時はemptySendBehavior設定に応じてスキップまたは通知メールが送信される
+- メール送信失敗時は最大3回までリトライし、失敗時はJobRun.errorsに記録される
+- ジョブ実行時に1件以上の失敗がある場合、失敗通知メールが送信される
+
 ### 2.4 スケジュール
+
+**ユーザー価値:** 日次で自動的に情報を収集・配信し、手動操作を不要にする。
 
 | ID | パターン | 要求 |
 |----|----------|------|
@@ -72,7 +102,14 @@
 | REQ-SCH-003 | Ubiquitous | The system shall protect the cron endpoint with a shared secret (e.g. CRON_SECRET) passed in the request header. |
 | REQ-SCH-004 | Unwanted Behavior | When the daily job is triggered while a previous run is still in progress, the system shall not start a second run (e.g. by using a lock or checking run status) and shall log or respond that the request was skipped. |
 
+**受け入れ基準:**
+- POST /api/cron/daily が実行中ジョブがある状態で呼ばれた場合、409 Conflictが返される
+- レスポンスに "Job already running" のメッセージが含まれる
+- 新しいジョブは開始されない
+
 ### 2.5 Web UI - 収集ソース設定
+
+**ユーザー価値:** Web UIでソースを簡単に追加・編集・削除でき、コード変更なしで収集対象を変更できる。
 
 | ID | パターン | 要求 |
 |----|----------|------|
@@ -90,6 +127,15 @@
 | REQ-UI-007 | Ubiquitous | The system shall allow configuring whether to send email when no new articles exist (skip or send notification). |
 | REQ-UI-012 | Optional | Where Gmail credentials are used, the system shall store them securely (env vars or secrets). |
 
+### 2.6.1 Settings API
+
+| ID | パターン | 要求 |
+|----|----------|------|
+| REQ-SET-001 | Ubiquitous | The system shall provide a GET /api/settings endpoint that returns the current settings (dailySendTime, recipientEmail, emptySendBehavior, costLimitMonthly, costWarningRatio). |
+| REQ-SET-002 | Event-Driven | When the user updates settings via PUT /api/settings, the system shall validate and persist the new values. |
+| REQ-SET-003 | Ubiquitous | The system shall validate dailySendTime as "HH:mm" format (24-hour), recipientEmail as valid email format, emptySendBehavior as enum value (skip or sendNotification), costLimitMonthly as positive number or null, and costWarningRatio as number between 0 and 1. |
+| REQ-SET-004 | Ubiquitous | The system shall manage settings as a single record (singleton pattern) in the Settings table. |
+
 ### 2.7 Web UI - 過去記事の閲覧・検索
 
 | ID | パターン | 要求 |
@@ -106,6 +152,13 @@
 | REQ-EXT-001 | Ubiquitous | The system shall support adding and removing sources without code changes. |
 | REQ-EXT-002 | Ubiquitous | The system shall allow per-source optional settings (e.g. CSS selector for content extraction). |
 
+### 2.9 ジョブ制御
+
+| ID | パターン | 要求 |
+|----|----------|------|
+| REQ-JOB-001 | Event-Driven | When the user triggers a manual run via Web UI or API, the system shall start the daily job as if triggered by the scheduler. |
+| REQ-JOB-002 | Event-Driven | When the user requests to stop a running job, the system shall gracefully stop after the current phase completes and shall not proceed to the next phase. |
+
 ---
 
 ## 3. 非機能要件
@@ -116,6 +169,11 @@
 |----|----------|------|
 | REQ-NFR-001 | Ubiquitous | The system shall handle approximately 5 minutes worth of reading material per day (roughly 5–20 articles depending on length). |
 | REQ-NFR-002 | Event-Driven | When loading the article list, the system shall respond within 3 seconds. |
+
+**受け入れ基準:**
+- 記事一覧API（GET /api/articles）が100件以下のデータで3秒以内に応答する
+- ネットワーク遅延を除いたサーバー処理時間が3秒以内である
+- 全文検索インデックス（tsvector）または簡易検索（contains）を使用して実現する
 
 ### 3.2 スケーラビリティ
 
@@ -154,6 +212,14 @@
 |----|----------|------|
 | REQ-NFR-006 | Optional | The system shall document or provide a way to confirm usage and cost for Supabase and Claude API (e.g. links to provider dashboards, or storing usage in DB for reference). |
 
+### 3.7 コスト管理
+
+| ID | パターン | 要求 |
+|----|----------|------|
+| REQ-COT-001 | Ubiquitous | The system shall record Claude API usage (tokens, cost in USD) per job run in the metrics table. |
+| REQ-COT-002 | State-Driven | When the monthly cost (calculated from metrics table) reaches the user-configured costLimitMonthly, the system shall skip summarization for all remaining articles in that job run and subsequent job runs until the next month begins. |
+| REQ-COT-003 | Event-Driven | When the monthly cost reaches a warning threshold (costLimitMonthly × costWarningRatio, default 80%), the system shall send a notification email to the configured recipient before proceeding with summarization. |
+
 ---
 
 ## 4. 制約・前提
@@ -165,11 +231,12 @@
 | データベース | Supabase（PostgreSQL） |
 | メール | Gmail 専用アカウント |
 | 収集方式 | スクレイピングのみ（現時点） |
-| 要約 | Claude（Anthropic） |
+| 要約 | Claude（Anthropic）。本文変更時のみ要約を再生成（summary を null に設定して次回ジョブで再要約） |
 | 配信形式 | 複数記事を1通のメールに含める |
 | デプロイ | 自前サーバー（当初）、将来 Vercel も検討 |
 | ジョブ実行 | HTTP API 経由でトリガー（crontab / Vercel Cron 等） |
 | 重複記事 | 同一 URL は1回のみ表示；本文変更時は要約を再生成 |
+| Settings API | Phase 2.5 で実装必須（Phase 3 配信機能で使用） |
 | ソース単位 | 単一記事 URL と一覧ページ URL の両方対応 |
 | 0件時 | 設定で「送らない」または「案内メール送る」を選択可能 |
 | 想定ソース例 | MONOist, Qiita, note, X (Twitter), 日経xTECH |

@@ -14,9 +14,14 @@
 
 ## 必要な環境
 
-- Node.js >= 20.0.0
+- **Node.js >= 20**（cheerio スクレイピングで Node 18 だと `File is not defined` が発生します）
 - npm >= 10.0.0
-- PostgreSQL（ローカルまたはリモート）
+- PostgreSQL（ローカルまたは Supabase）
+
+### Node 18 / 20 について
+
+- **Node 18**: `scripts/polyfill-node18.cjs` を自動プリロードして cheerio の `File is not defined` を回避（`npm run dev` で対応済み）
+- **Node 20+ 推奨**: より安定した動作のため、`.nvmrc` に 20 を指定。`nvm use` または `bash scripts/setup-node20.sh`
 
 ## セットアップ手順
 

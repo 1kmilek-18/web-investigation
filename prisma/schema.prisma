@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Web Investigation - SDD 5.3 準拠
+// 参照: docs/SDD.md, docs/REQUIREMENTS.md
 
 generator client {
   provider = "prisma-client-js"
@@ -10,11 +10,85 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 例: 収集記事・要約・配信履歴などは今後モデルを追加
-// model Article {
-//   id        String   @id @default(cuid())
-//   url       String
-//   title     String?
-//  summary   String?
-//   createdAt DateTime @default(now())
-// }
+model Source {
+  id        String    @id @default(cuid())
+  url       String    @unique
+  type      SourceType
+  selector  String?   @db.Text
+  config    Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  articles  Article[]
+
+  @@index([type])
+}
+
+enum SourceType {
+  single  // 単一記事 URL
+  list    // 一覧ページ URL
+}
+
+model Article {
+  id          String    @id @default(cuid())
+  url         String    @unique
+  title       String?
+  rawContent  String    @db.Text
+  summary     String?   @db.Text
+  sourceId    String?
+  collectedAt DateTime
+  updatedAt   DateTime  @updatedAt
+  source      Source?   @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@index([collectedAt])
+  @@index([sourceId])
+}
+
+model Settings {
+  id                 String   @id @default(cuid())
+  dailySendTime      String   // e.g. "09:00"
+  recipientEmail     String
+  emptySendBehavior  EmptySendBehavior
+  costLimitMonthly   Float?   // 月次コスト上限（USD）
+  costWarningRatio   Float    @default(0.8)  // 警告閾値（0.8 = 80%）
+  updatedAt          DateTime @updatedAt
+}
+
+enum EmptySendBehavior {
+  skip             // 0件時はメール送らない
+  sendNotification // 0件時は案内メールを送る
+}
+
+model JobRun {
+  id                  String       @id @default(cuid())
+  startedAt           DateTime     @default(now())
+  finishedAt          DateTime?
+  status              JobRunStatus
+  articlesCollected   Int          @default(0)
+  articlesSummarized  Int          @default(0)
+  errors              Json?        // [{ sourceUrl?, articleUrl?, type, message }]
+  metrics             Metric[]
+
+  @@index([status])
+  @@index([startedAt])
+}
+
+enum JobRunStatus {
+  running
+  stopping   // 停止処理中
+  completed
+  stopped    // 手動停止完了
+  failed
+}
+
+model Metric {
+  id         String   @id @default(cuid())
+  runId      String?
+  metricType String
+  value      Float
+  recordedAt DateTime @default(now())
+  run        JobRun?  @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@index([runId])
+  @@index([metricType])
+  @@index([recordedAt])
+}
