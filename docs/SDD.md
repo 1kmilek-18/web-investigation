@@ -3,7 +3,7 @@
 **バージョン:** 1.1  
 **作成日:** 2026-02-02  
 **更新日:** 2026-02-02  
-**参照:** docs/REQUIREMENTS.md v1.3  
+**参照:** docs/REQUIREMENTS.md v1.5  
 **設計ID:** DES-WEB-ml4mktfi
 
 ---

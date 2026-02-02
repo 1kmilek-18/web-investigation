@@ -2,7 +2,7 @@
 
 **作成日:** 2026-02-02  
 **更新日:** 2026-02-02  
-**参照:** docs/REQUIREMENTS.md v1.2、docs/SDD.md v1.1、実装フェーズ Phase 1〜5
+**参照:** docs/REQUIREMENTS.md v1.5、docs/SDD.md v1.1、実装フェーズ Phase 1〜5
 
 ---
 
@@ -71,8 +71,10 @@
 ### 2.2 実装フェーズと依存関係
 
 ```
-Phase 1（基盤・収集） → Phase 2（要約） → Phase 3（配信） → Phase 4（Web UI） → Phase 5（運用強化）
+Phase 1（基盤・収集） → Phase 2（要約） → [Phase 2.5: Settings API 必須] → Phase 3（配信） → Phase 4（Web UI） → Phase 5（運用強化）
 ```
+
+**設計レビュー対応（DESIGN_REVIEW.md）:** Phase 3（配信）で Settings が必要なため、**Phase 3 開始前に Settings API の実装を完了すること**。Phase 2 と並行して Phase 2.5 で実装可能。
 
 ---
 
@@ -229,7 +231,7 @@ Phase 1（基盤・収集） → Phase 2（要約） → Phase 3（配信） →
 
 ## 6. 参照
 
-- `docs/REQUIREMENTS.md` — 要求定義書 v1.2
+- `docs/REQUIREMENTS.md` — 要求定義書 v1.5
 - `docs/SDD.md` — C4 設計ドキュメント（トレーサビリティ含む）
 - `STRUCTURE.md` — ディレクトリ構成
 - `.knowledge/graph.json` — ローカルナレッジグラフ（6 エンティティ）

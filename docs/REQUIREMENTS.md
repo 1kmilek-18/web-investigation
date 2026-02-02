@@ -1,8 +1,8 @@
 # Web Investigation 要求定義書
 
-**バージョン:** 1.4  
+**バージョン:** 1.5  
 **作成日:** 2026-02-02  
-**更新日:** 2026-02-02  
+**更新日:** 2026-02-03  
 **レビュー:** docs/REQUIREMENTS_REVIEW.md (2026-02-02)  
 **対象:** 生産技術×デジタル 技術情報 収集・要約・メール配信システム
 
@@ -118,7 +118,14 @@
 | REQ-UI-003 | Event-Driven | When the user deletes a source, the system shall remove it from future scrapes. |
 | REQ-UI-004 | Ubiquitous | The system shall display the list of configured sources with add/edit/delete actions. |
 
+**受け入れ基準:**
+- ソースの追加・編集・削除がAPIまたはUIで永続化される
+- ソース一覧に追加・編集・削除アクションが含まれる
+- 削除したソースは次回収集ジョブに含まれない
+
 ### 2.6 Web UI - 配信設定
+
+**ユーザー価値:** 送信時刻・宛先・0件時の動作を設定でき、運用に合わせて配信を制御できる。
 
 | ID | パターン | 要求 |
 |----|----------|------|
@@ -127,7 +134,13 @@
 | REQ-UI-007 | Ubiquitous | The system shall allow configuring whether to send email when no new articles exist (skip or send notification). |
 | REQ-UI-012 | Optional | Where Gmail credentials are used, the system shall store them securely (env vars or secrets). |
 
+**受け入れ基準:**
+- 送信時刻（HH:mm形式）・宛先メールアドレス・0件時動作が設定・保存できる
+- Gmail認証情報は環境変数またはシークレットに格納され、DBやコードに平文で保存されない
+
 ### 2.6.1 Settings API
+
+**ユーザー価値:** 配信設定をAPIで取得・更新でき、Web UIや外部ツールから一貫して設定を管理できる。
 
 | ID | パターン | 要求 |
 |----|----------|------|
@@ -136,7 +149,15 @@
 | REQ-SET-003 | Ubiquitous | The system shall validate dailySendTime as "HH:mm" format (24-hour), recipientEmail as valid email format, emptySendBehavior as enum value (skip or sendNotification), costLimitMonthly as positive number or null, and costWarningRatio as number between 0 and 1. |
 | REQ-SET-004 | Ubiquitous | The system shall manage settings as a single record (singleton pattern) in the Settings table. |
 
+**受け入れ基準:**
+- GET /api/settings で現在の設定が取得できる
+- PUT /api/settings で dailySendTime, recipientEmail, emptySendBehavior, costLimitMonthly, costWarningRatio が検証され永続化される
+- dailySendTime は "HH:mm"、recipientEmail はメール形式、emptySendBehavior は skip または sendNotification、costLimitMonthly は正の数または null、costWarningRatio は 0〜1 であること
+- 設定は1レコード（シングルトン）として管理される
+
 ### 2.7 Web UI - 過去記事の閲覧・検索
+
+**ユーザー価値:** 過去の記事を一覧・検索・詳細で確認でき、必要な情報を素早く参照できる。
 
 | ID | パターン | 要求 |
 |----|----------|------|
@@ -145,19 +166,38 @@
 | REQ-UI-010 | Event-Driven | When the user filters by date range, the system shall show only articles in that range. |
 | REQ-UI-011 | Event-Driven | When the user clicks an article, the system shall show full content and link to original URL. |
 
+**受け入れ基準:**
+- 記事一覧にタイトル・要約・収集日・ソースが表示される
+- キーワード検索でタイトル・要約でフィルタされる
+- 日付範囲フィルタで該当期間の記事のみ表示される
+- 記事クリックで本文と元URLが表示される
+
 ### 2.8 情報ソースの拡張性
+
+**ユーザー価値:** コードを変更せずにソースを追加・削除でき、運用中に収集対象を柔軟に変更できる。
 
 | ID | パターン | 要求 |
 |----|----------|------|
 | REQ-EXT-001 | Ubiquitous | The system shall support adding and removing sources without code changes. |
 | REQ-EXT-002 | Ubiquitous | The system shall allow per-source optional settings (e.g. CSS selector for content extraction). |
 
+**受け入れ基準:**
+- ソースの追加・削除がコード変更なしで可能である（APIまたはUI経由）
+- ソースごとにオプション設定（例: コンテンツ抽出用セレクタ）が指定可能である
+
 ### 2.9 ジョブ制御
+
+**ユーザー価値:** 手動実行やジョブ停止で、スケジュールに依存せずに収集・配信を制御できる。
 
 | ID | パターン | 要求 |
 |----|----------|------|
 | REQ-JOB-001 | Event-Driven | When the user triggers a manual run via Web UI or API, the system shall start the daily job as if triggered by the scheduler. |
 | REQ-JOB-002 | Event-Driven | When the user requests to stop a running job, the system shall gracefully stop after the current phase completes and shall not proceed to the next phase. |
+
+**受け入れ基準:**
+- 手動実行API（POST /api/jobs/manual）で日次ジョブと同等の処理が開始される
+- 停止API（POST /api/jobs/stop）呼び出し後、現在のフェーズ完了後にジョブが終了し、次のフェーズ（例: 要約→配信）には進まない
+- 停止要求後はジョブ状態が stopped または stopping で記録される
 
 ---
 
@@ -171,15 +211,18 @@
 | REQ-NFR-002 | Event-Driven | When loading the article list, the system shall respond within 3 seconds. |
 
 **受け入れ基準:**
-- 記事一覧API（GET /api/articles）が100件以下のデータで3秒以内に応答する
-- ネットワーク遅延を除いたサーバー処理時間が3秒以内である
-- 全文検索インデックス（tsvector）または簡易検索（contains）を使用して実現する
+- **REQ-NFR-001:** 1日あたりの収集・要約・配信対象がおおむね5〜20記事の範囲で設計・動作する（1記事あたり約15〜60秒の読書量を想定）。負荷テストでは20記事程度で日次ジョブが完了することを確認する。
+- **REQ-NFR-002:** 記事一覧API（GET /api/articles）が100件以下のデータで3秒以内に応答する。測定条件: 同一ネットワーク内からのリクエスト、クエリパラメータ（keyword, dateFrom, dateTo）を含む通常検索。ネットワーク遅延を除いたサーバー処理時間が3秒以内である。全文検索インデックス（tsvector）または簡易検索（contains）を使用して実現する。
 
 ### 3.2 スケーラビリティ
 
 | ID | パターン | 要求 |
 |----|----------|------|
 | REQ-NFR-003 | Ubiquitous | The system shall be designed for single-user use (no multi-tenancy required). |
+
+**受け入れ基準:**
+- 利用者・配信先が1名である前提で設計されている（マルチテナント・認証・権限分離は不要）
+- 設定（送信先・送信時刻等）は単一レコード（シングルトン）で管理される
 
 ### 3.3 セキュリティ（推奨）
 
@@ -192,12 +235,23 @@
 | REQ-SEC-005 | Ubiquitous | The system shall respect robots.txt of target sites where applicable. |
 | REQ-SEC-006 | Ubiquitous | The system shall sanitize scraped HTML before storage and display to prevent XSS. |
 
+**受け入れ基準:**
+- Gmail認証情報は環境変数またはシークレットに格納され、コード・DBに平文で保存されない
+- 本番環境ではWeb UIがHTTPSで提供される
+- スクレイピングはオリジン間で1200ms以上の間隔を空ける（レート制限）
+- 対象サイトのrobots.txtを確認し、Disallowの場合はスキップする
+- 保存・表示前にHTMLをサニタイズし、スクリプト・iframe等が除去される
+
 ### 3.4 可用性・運用
 
 | ID | パターン | 要求 |
 |----|----------|------|
 | REQ-NFR-004 | Ubiquitous | The system shall log errors and important events for troubleshooting. |
 | REQ-NFR-005 | Unwanted Behavior | If the database is unavailable, then the system shall fail gracefully and log the error. |
+
+**受け入れ基準:**
+- **REQ-NFR-004:** エラーおよび重要イベント（ジョブ開始/終了、ソース失敗、要約失敗、配信失敗等）がログに記録される。ログレベル（error, warn, info）が区別可能である。
+- **REQ-NFR-005:** DB接続不可時は、該当リクエストに対して 503 Service Unavailable または適切なエラーレスポンスを返し、エラー内容をログに記録する。部分的な処理結果で応答せず、安全に失敗する（fail gracefully）。再試行は呼び出し側（スケジューラ等）に委ねる。
 
 ### 3.5 メトリクス
 
@@ -206,11 +260,19 @@
 | REQ-MET-001 | Ubiquitous | The system shall persist operational metrics (e.g. per-run: articles collected, summarization success/failure counts, delivery status) in the application database. |
 | REQ-MET-002 | Ubiquitous | The system shall allow recording and querying of these metrics (e.g. via internal APIs or admin) so that future improvement and analysis can be performed. |
 
+**受け入れ基準:**
+- ジョブ実行ごとに収集件数・要約成功/失敗件数・配信状態等がDB（Metric テーブル等）に記録される
+- メトリクスを記録・参照する手段（内部APIまたは管理画面）が用意され、改善・分析に利用できる
+
 ### 3.6 コスト確認（推奨）
 
 | ID | パターン | 要求 |
 |----|----------|------|
 | REQ-NFR-006 | Optional | The system shall document or provide a way to confirm usage and cost for Supabase and Claude API (e.g. links to provider dashboards, or storing usage in DB for reference). |
+
+**受け入れ基準:**
+- Supabase・Claude APIの利用量・コストを確認する方法がドキュメントまたはダッシュボードリンクで明示されている
+- 必要に応じて利用量をDBに記録し参照可能にしている
 
 ### 3.7 コスト管理
 
@@ -219,6 +281,11 @@
 | REQ-COT-001 | Ubiquitous | The system shall record Claude API usage (tokens, cost in USD) per job run in the metrics table. |
 | REQ-COT-002 | State-Driven | When the monthly cost (calculated from metrics table) reaches the user-configured costLimitMonthly, the system shall skip summarization for all remaining articles in that job run and subsequent job runs until the next month begins. |
 | REQ-COT-003 | Event-Driven | When the monthly cost reaches a warning threshold (costLimitMonthly × costWarningRatio, default 80%), the system shall send a notification email to the configured recipient before proceeding with summarization. |
+
+**受け入れ基準:**
+- ジョブ実行ごとにClaude APIのトークン数・コスト（USD）がメトリクステーブルに記録される
+- 月次累計コストが costLimitMonthly に達した場合、当該ジョブの残り要約および以降のジョブで要約をスキップする（月初日でリセット）
+- 月次累計が costLimitMonthly × costWarningRatio（デフォルト0.8）に達した場合、要約実行前に警告メールを送信する
 
 ---
 

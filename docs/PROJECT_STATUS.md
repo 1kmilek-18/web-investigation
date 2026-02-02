@@ -2,7 +2,7 @@
 
 **更新日:** 2026-02-02  
 **バージョン:** 1.0  
-**参照:** docs/REQUIREMENTS.md v1.3, docs/SDD.md v1.1, docs/NEXT_TASKS.md
+**参照:** docs/REQUIREMENTS.md v1.5, docs/SDD.md v1.1, docs/NEXT_TASKS.md
 
 ---
 
@@ -265,7 +265,7 @@
 
 | ドキュメント | バージョン | 説明 |
 |-------------|-----------|------|
-| `docs/REQUIREMENTS.md` | v1.2 | 要求定義書（EARS形式） |
+| `docs/REQUIREMENTS.md` | v1.5 | 要求定義書（EARS形式） |
 | `docs/SDD.md` | v1.1 | 設計ドキュメント（C4モデル） |
 | `docs/NEXT_TASKS.md` | v1.0 | 次のタスク整理 |
 | `docs/DESIGN_REVIEW.md` | v1.0 | 設計書レビュー結果 |

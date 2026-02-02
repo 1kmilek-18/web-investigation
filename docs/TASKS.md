@@ -2,7 +2,7 @@
 
 **作成日:** 2026-02-02  
 **更新日:** 2026-02-02  
-**参照:** docs/REQUIREMENTS.md v1.4, docs/SDD.md v1.1, docs/PROJECT_STATUS.md v1.0  
+**参照:** docs/REQUIREMENTS.md v1.5, docs/SDD.md v1.1, docs/PROJECT_STATUS.md v1.0  
 **Sprint期間:** 5日間（1日6時間の生産的コーディング）
 
 ---

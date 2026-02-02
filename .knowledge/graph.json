@@ -1,7 +1,8 @@
 {
   "version": "1.0.0",
   "metadata": {
-    "lastModified": "2026-02-02T00:00:00.000Z",
+    "lastModified": "2026-02-03T00:00:00.000Z",
+    "requirementsVersion": "1.5",
     "entityCount": 6,
     "relationCount": 1
   },
@@ -63,7 +64,7 @@
       "description": "EARS形式の機能・非機能要件。収集(スクレイピング)、要約(Claude)、配信(メール)、Web UI、セキュリティ。重複排除・ソース種別・ジョブ実行方式を明確化",
       "properties": {
         "path": "docs/REQUIREMENTS.md",
-        "version": "1.1",
+        "version": "1.5",
         "userContext": "単一ユーザー、Gmail専用アカウント、Supabase、Claude(Anthropic)、自前サーバー→Vercel検討",
         "keyDecisions": ["同一URLは本文変更時のみ要約更新", "複数ソース同一URLは1回のみ", "単一URLと一覧URL両対応", "API経由ジョブトリガー", "0件時は設定で制御"]
       },
