@@ -9,6 +9,13 @@ export default defineConfig({
     globals: true,
     environment: "node",
     setupFiles: ["./src/test/setup.ts"],
+    environmentMatchGlobs: [["src/app/**/*.test.tsx", "happy-dom"]],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+      include: ["src/lib/**/*.ts"],
+      exclude: ["src/lib/__tests__/**", "**/*.test.ts", "**/*.d.ts"],
+    },
   },
   resolve: {
     alias: {

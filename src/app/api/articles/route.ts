@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isValidUrl } from "@/lib/validation";
 import type { Prisma } from "@prisma/client";
-
-function isValidUrl(s: string): boolean {
-  try {
-    new URL(s);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /** GET /api/articles — 一覧・検索・フィルタ (REQ-UI-008〜010, SDD 9.3) */
 export async function GET(request: NextRequest) {
@@ -59,8 +51,25 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/** POST /api/articles — 記事作成（内部/スクレイパー用）(REQ-SCR-005) */
+/** POST /api/articles — 記事作成（内部/スクレイパー用）(REQ-SCR-005, CODE_REVIEW §4.2: CRON_SECRET 認証) */
 export async function POST(request: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  if (secret) {
+    const auth = request.headers.get("authorization");
+    const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
+    if (token !== secret) {
+      return NextResponse.json(
+        { error: "Invalid or missing CRON_SECRET" },
+        { status: 401 }
+      );
+    }
+  } else {
+    return NextResponse.json(
+      { error: "CRON_SECRET is not configured" },
+      { status: 401 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { url, title, rawContent, summary, sourceId, collectedAt } = body;

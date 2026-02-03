@@ -3,7 +3,7 @@
 **バージョン:** 1.1  
 **作成日:** 2026-02-02  
 **更新日:** 2026-02-02  
-**参照:** docs/REQUIREMENTS.md v1.3  
+**参照:** docs/REQUIREMENTS.md v1.4  
 **設計ID:** DES-WEB-ml4mktfi
 
 ---
@@ -702,6 +702,6 @@ await prisma.article.findMany({
 
 ## 10. 参照
 
-- `docs/REQUIREMENTS.md` — 要求定義書 v1.2
+- `docs/REQUIREMENTS.md` — 要求定義書 v1.4
 - `docs/NEXT_TASKS.md` — 次のタスク整理
 - `STRUCTURE.md` — ディレクトリ構成

@@ -1,8 +1,8 @@
 # Web Investigation プロジェクト最新状況
 
-**更新日:** 2026-02-02  
-**バージョン:** 1.0  
-**参照:** docs/REQUIREMENTS.md v1.3, docs/SDD.md v1.1, docs/NEXT_TASKS.md
+**更新日:** 2026-02-03  
+**バージョン:** 1.2  
+**参照:** docs/REQUIREMENTS.md v1.4, docs/SDD.md v1.1, docs/NEXT_TASKS.md, docs/TASKS.md, docs/CODE_REVIEW.md
 
 ---
 
@@ -13,7 +13,7 @@
 | **プロジェクト名** | Web Investigation |
 | **目的** | 生産技術×デジタル関連の技術情報をWebスクレイピングで収集し、LLMで要約してメールで配信するシステム |
 | **技術スタック** | Next.js (App Router), TypeScript, Tailwind CSS, Shadcn/UI, Prisma, PostgreSQL (Supabase), Claude API, Gmail |
-| **開発フェーズ** | Phase 1完了、Phase 2以降未着手 |
+| **開発フェーズ** | Phase 1完了、Phase 2完了、Phase 2.5完了、Phase 3以降未着手 |
 | **最終コミット** | a8d171a - docs: 要求定義書 v1.2 |
 
 ---
@@ -66,34 +66,59 @@
 
 ---
 
-## ⏳ Phase 2: 要約（未着手）
+## ✅ Phase 2: 要約（完了）
 
-### 未実装機能
+### 実装済み機能
 
-| 機能 | 関連要件 | 優先度 |
-|------|----------|--------|
-| **Claude API連携** | REQ-SUM-001, REQ-SUM-002 | 🔴 高 |
-| **要約リトライロジック** | REQ-SUM-003 | 🔴 高 |
-| **並列/バッチ要約処理** | REQ-SUM-004 | 🟡 中 |
-| **要約失敗状態の管理** | REQ-SUM-003 | 🔴 高 |
+| 機能 | 実装状況 | ファイル |
+|------|----------|----------|
+| **Summarizer Service** | ✅ 完了 | `src/lib/summarizer.ts` |
+| **Claude API連携** | ✅ 完了 | `src/lib/summarizer.ts` |
+| **要約リトライロジック** | ✅ 完了 | `src/lib/summarizer.ts` |
+| **並列/バッチ要約処理** | ✅ 完了 | `src/lib/summarizer.ts` |
+| **Cron Handler統合** | ✅ 完了 | `src/lib/cron-handler.ts` |
+| **コスト管理統合** | ✅ 完了 | `src/lib/cost-manager.ts`, `src/lib/cron-handler.ts` |
+| **API使用量メトリクス記録** | ✅ 完了 | `src/lib/summarizer.ts` |
 
-### 未実装要件
+### 実装済み要件
 
 | カテゴリ | 要件数 | 実装済み | 進捗率 |
 |----------|--------|----------|--------|
-| 要約（REQ-SUM-*） | 4 | 0 | 0% |
+| 要約（REQ-SUM-*） | 4 | 4 | 100% |
 
 ---
 
-## ⏳ Phase 2.5: Settings API（未着手・Phase 3前に必須）
+## ✅ Phase 2.5: Settings API（完了）
 
-### 未実装機能
+### 実装済み機能
 
-| 機能 | 関連要件 | 優先度 |
-|------|----------|--------|
-| **Settings API (GET/PUT)** | REQ-UI-005〜007, REQ-UI-012 | 🔴 高 |
+| 機能 | 実装状況 | ファイル |
+|------|----------|----------|
+| **Settings API (GET)** | ✅ 完了 | `src/app/api/settings/route.ts` |
+| **Settings API (PUT)** | ✅ 完了 | `src/app/api/settings/route.ts` |
+| **バリデーション** | ✅ 完了 | `src/app/api/settings/route.ts` |
 
-**注意:** Phase 3（配信）で Settings が必要なため、Phase 3 開始前に実装必須。
+### 実装済みAPIエンドポイント
+
+| エンドポイント | メソッド | 説明 | 認証 |
+|----------------|----------|------|------|
+| `/api/settings` | GET | 設定取得 | なし |
+| `/api/settings` | PUT | 設定更新（バリデーション含む） | なし |
+
+---
+
+## ✅ コードレビュー対応（完了・2026-02-03）
+
+docs/CODE_REVIEW.md に基づくエンハンスを **TSK-REV-001 ～ TSK-REV-013** として実施済み。
+
+| カテゴリ | 対応内容 |
+|----------|----------|
+| **セキュリティ** | メール HTML エスケープ（XSS）、POST /api/articles の CRON_SECRET 認証、robots.txt ReDoS 対策 |
+| **設計** | Settings シングルトン upsert、日次ジョブ JST 明示、cron-handler static import、scraper 型ガード、transporter シングルトン |
+| **品質** | isValidUrl 共通化、Settings API zod バリデーション、リトライ回数統一・コメント |
+| **テスト・運用** | Vitest カバレッジ設定、テスト修正（cron-handler/summarizer/settings）、ドキュメント更新 |
+
+全 31 テスト合格。詳細は docs/TASK_PLAN_CODE_REVIEW.md, docs/TASKS.md 参照。
 
 ---
 
@@ -152,8 +177,8 @@
 | フェーズ | 状態 | 進捗率 |
 |---------|------|--------|
 | **Phase 1: 基盤・収集** | ✅ 完了 | 100% |
-| **Phase 2: 要約** | ⏳ 未着手 | 0% |
-| **Phase 2.5: Settings API** | ⏳ 未着手 | 0% |
+| **Phase 2: 要約** | ✅ 完了 | 100% |
+| **Phase 2.5: Settings API** | ✅ 完了 | 100% |
 | **Phase 3: 配信** | ⏳ 未着手 | 0% |
 | **Phase 4: Web UI** | ⏳ 未着手 | 0% |
 | **Phase 5: 運用強化** | ⏳ 未着手 | 0% |
@@ -163,18 +188,18 @@
 | カテゴリ | 要件数 | 実装済み | 進捗率 |
 |----------|--------|----------|--------|
 | **収集** | 10 | 10 | 100% |
-| **要約** | 4 | 0 | 0% |
+| **要約** | 4 | 4 | 100% |
 | **配信** | 6 | 0 | 0% |
 | **スケジュール** | 4 | 4 | 100% |
 | **Web UI - ソース** | 4 | 4 (API) | 100% (API) |
-| **Web UI - 配信** | 4 | 0 | 0% |
+| **Web UI - 配信** | 4 | 4 (API) | 100% (API) |
 | **Web UI - 記事** | 4 | 4 (API) | 100% (API) |
 | **拡張性** | 2 | 2 | 100% |
 | **ジョブ制御** | 2 | 2 | 100% |
 | **非機能要件** | 11 | 3 | 27% |
-| **メトリクス** | 2 | 0 | 0% |
-| **コスト管理** | 3 | 0 | 0% |
-| **合計** | 60 | 29 | **48%** |
+| **メトリクス** | 2 | 1 | 50% |
+| **コスト管理** | 3 | 2 | 67% |
+| **合計** | 60 | 40 | **67%** |
 
 ---
 
@@ -198,11 +223,17 @@
 | **Cron Handler** | `src/lib/cron-handler.ts` | 日次ジョブ実行ロジック（Phase 1: 収集のみ） |
 | **Prisma Client** | `src/lib/prisma.ts` | データベースアクセス |
 
+### 実装済みサービス
+
+| サービス | ファイル | 説明 |
+|----------|----------|------|
+| **Summarizer Service** | `src/lib/summarizer.ts` | Claude API連携による要約生成（リトライ、並列処理、メトリクス記録含む） |
+| **Cost Manager** | `src/lib/cost-manager.ts` | コスト管理（月次上限チェック、警告閾値） |
+
 ### 未実装サービス
 
 | サービス | 説明 | 優先度 |
 |----------|------|--------|
-| **Summarizer Service** | Claude API連携による要約生成 | 🔴 高 |
 | **Email Sender Service** | Gmail送信機能 | 🔴 高 |
 
 ---
@@ -265,7 +296,7 @@
 
 | ドキュメント | バージョン | 説明 |
 |-------------|-----------|------|
-| `docs/REQUIREMENTS.md` | v1.2 | 要求定義書（EARS形式） |
+| `docs/REQUIREMENTS.md` | v1.4 | 要求定義書（EARS形式） |
 | `docs/SDD.md` | v1.1 | 設計ドキュメント（C4モデル） |
 | `docs/NEXT_TASKS.md` | v1.0 | 次のタスク整理 |
 | `docs/DESIGN_REVIEW.md` | v1.0 | 設計書レビュー結果 |
@@ -312,3 +343,11 @@
 5. ✅ **ANTHROPIC_API_KEY設定** - 完了（2026-02-02）
    - Claude API認証キーを設定済み
    - Phase 2（要約機能）の実装準備完了
+6. ✅ **Phase 2: 要約機能実装** - 完了（2026-02-02）
+   - Summarizer Service実装完了
+   - Cron Handler統合完了
+   - ユニットテスト・統合テスト通過
+7. ✅ **Phase 2.5: Settings API実装** - 完了（2026-02-02）
+   - GET/PUT /api/settings実装完了
+   - バリデーション実装完了
+   - テスト通過

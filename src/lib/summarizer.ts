@@ -10,10 +10,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import pLimit from "p-limit";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import type { Article } from "@prisma/client";
 
 const MAX_CONCURRENT_SUMMARIZATIONS = 5; // REQ-SUM-004: 最大5並列
-const MAX_RETRIES = 3; // REQ-SUM-003: 最大3回リトライ
+/** 最大試行回数（合計3回）。REQ-SUM-003, CODE_REVIEW §6.4: summarizer と email-sender で統一 */
+const MAX_RETRIES = 3;
 const RETRY_DELAYS = [1000, 2000, 4000]; // REQ-SUM-003: 指数バックオフ（1s, 2s, 4s）
 
 // Claude API クライアント初期化
@@ -35,7 +37,7 @@ async function summarizeSingleArticle(
   // APIキーの確認
   if (!anthropic || !process.env.ANTHROPIC_API_KEY) {
     const errorMsg = "ANTHROPIC_API_KEY is not configured";
-    console.error(`[summarizeSingleArticle] ${errorMsg}`);
+    logger.error("ANTHROPIC_API_KEY is not configured");
     throw new Error(errorMsg);
   }
 
@@ -51,11 +53,9 @@ ${article.rawContent.substring(0, 10000)}${article.rawContent.length > 10000 ? "
   let lastError: Error | null = null;
 
   // リトライロジック（REQ-SUM-003）
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(
-        `[summarizeSingleArticle] Attempting to summarize article ${article.id} (attempt ${attempt + 1}/${MAX_RETRIES + 1})`
-      );
+      logger.info("Attempting to summarize article", { articleId: article.id, attempt, maxRetries: MAX_RETRIES });
       
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-5-20250929",
@@ -92,17 +92,12 @@ ${article.rawContent.substring(0, 10000)}${article.rawContent.length > 10000 ? "
         stack: error.stack,
       } : String(error);
       
-      console.error(
-        `[summarizeSingleArticle] Attempt ${attempt + 1}/${MAX_RETRIES + 1} failed for article ${article.id}:`,
-        errorDetails
-      );
+      logger.error("Summarize attempt failed", { articleId: article.id, attempt, maxRetries: MAX_RETRIES, error: errorDetails });
       
       // 最後の試行でない場合は待機してリトライ
       if (attempt < MAX_RETRIES) {
-        const delay = RETRY_DELAYS[attempt];
-        console.log(
-          `[summarizeSingleArticle] Retry attempt ${attempt + 1}/${MAX_RETRIES} for article ${article.id} after ${delay}ms delay`
-        );
+        const delay = RETRY_DELAYS[attempt - 1];
+        logger.info("Retry after delay", { articleId: article.id, attempt, delay });
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
@@ -111,16 +106,13 @@ ${article.rawContent.substring(0, 10000)}${article.rawContent.length > 10000 ? "
   // 全リトライ失敗
   const errorMessage = lastError instanceof Error ? lastError.message : String(lastError);
   const errorName = lastError instanceof Error ? lastError.name : "UnknownError";
-  console.error(
-    `[summarizeSingleArticle] Failed to summarize article ${article.id} after ${MAX_RETRIES + 1} attempts:`,
-    {
-      error: errorMessage,
-      errorName,
-      articleId: article.id,
-      articleUrl: article.url,
-      articleTitle: article.title,
-    }
-  );
+  logger.error("Failed to summarize article after retries", {
+    error: errorMessage,
+    errorName,
+    articleId: article.id,
+    articleUrl: article.url,
+    articleTitle: article.title,
+  });
   return null;
 }
 
@@ -198,7 +190,7 @@ async function summarizeAndSaveArticle(
     return { success: true, tokensUsed };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`[summarizeAndSaveArticle] Error for article ${article.id}:`, error);
+    logger.error("Error summarizing and saving article", { articleId: article.id, error: errorMessage });
     return {
       success: false,
       error: errorMessage,
@@ -227,7 +219,7 @@ export async function summarizeArticles(
   const errors: Array<{ articleId: string; articleUrl: string; error: string }> = [];
   let successCount = 0;
 
-  console.log(`[summarizeArticles] Starting summarization for ${articles.length} articles (max ${MAX_CONCURRENT_SUMMARIZATIONS} concurrent)`);
+  logger.info("Starting summarization", { count: articles.length, maxConcurrent: MAX_CONCURRENT_SUMMARIZATIONS });
 
   // 並列処理で要約実行
   const results = await Promise.allSettled(
@@ -236,16 +228,14 @@ export async function summarizeArticles(
         const result = await summarizeAndSaveArticle(article, jobRunId);
         if (result.success) {
           successCount++;
-          console.log(`[summarizeArticles] Successfully summarized article ${article.id} (${article.url})`);
+          logger.info("Successfully summarized article", { articleId: article.id, url: article.url });
         } else {
           errors.push({
             articleId: article.id,
             articleUrl: article.url,
             error: result.error || "Unknown error",
           });
-          console.error(
-            `[summarizeArticles] Failed to summarize article ${article.id} (${article.url}): ${result.error}`
-          );
+          logger.error("Failed to summarize article", { articleId: article.id, url: article.url, error: result.error });
         }
       })
     )
@@ -263,9 +253,7 @@ export async function summarizeArticles(
     }
   });
 
-  console.log(
-    `[summarizeArticles] Completed: ${successCount}/${articles.length} articles summarized successfully`
-  );
+  logger.info("Summarization completed", { successCount, total: articles.length });
 
   return {
     articlesSummarized: successCount,

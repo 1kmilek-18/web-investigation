@@ -9,6 +9,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { SETTINGS_ID } from "@/lib/constants";
 
 /** 当月の開始日時を取得 */
 function getCurrentMonthStart(): Date {
@@ -94,8 +95,8 @@ export async function checkCostLimitFromSettings(): Promise<
   }
 > {
   // Settingsを取得（シングルトン）
-  const settings = await prisma.settings.findFirst({
-    orderBy: { updatedAt: "desc" },
+  const settings = await prisma.settings.findUnique({
+    where: { id: SETTINGS_ID },
   });
 
   const costLimitMonthly = settings?.costLimitMonthly ?? null;

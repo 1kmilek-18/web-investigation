@@ -1,7 +1,7 @@
 # Web Investigation 要件レビュー結果
 
 **レビュー日:** 2026-02-02  
-**レビューバージョン:** 1.3  
+**レビューバージョン:** 1.4（要件定義書 v1.4 を対象）  
 **レビュアー:** Senior Requirements Reviewer  
 **参照:** 9 Constitutional Articles, EARS Methodology
 

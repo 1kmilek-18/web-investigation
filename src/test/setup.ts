@@ -4,6 +4,7 @@
  */
 
 import { vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
 
 // 環境変数のモック
 process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "test-api-key";

@@ -24,6 +24,9 @@ vi.mock("@/lib/prisma", () => ({
     article: {
       findMany: vi.fn(),
     },
+    settings: {
+      findUnique: vi.fn(),
+    },
   },
 }));
 
@@ -42,6 +45,8 @@ vi.mock("@/lib/summarizer", () => ({
 describe("Cron Handler - 要約機能統合", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // メール送信をスキップ（設定なし = メール送信なし）
+    vi.mocked(prisma.settings.findUnique).mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -358,10 +363,10 @@ describe("Cron Handler - 要約機能統合", () => {
 
   describe("hasRunningJob", () => {
     it("実行中のジョブがある場合はtrueを返す", async () => {
-      vi.mocked(prisma.jobRun.findFirst).mockResolvedValue({
-        id: "job-1",
-        status: "running",
-      } as any);
+      // 1回目: stopping状態なし → null, 2回目: running状態のジョブあり
+      vi.mocked(prisma.jobRun.findFirst)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: "job-1", status: "running" } as any);
 
       const result = await hasRunningJob();
       expect(result).toBe(true);

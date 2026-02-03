@@ -2,7 +2,7 @@
 
 **作成日:** 2026-02-02  
 **更新日:** 2026-02-02  
-**参照:** docs/REQUIREMENTS.md v1.2、docs/SDD.md v1.1、実装フェーズ Phase 1〜5
+**参照:** docs/REQUIREMENTS.md v1.4、docs/SDD.md v1.1、実装フェーズ Phase 1〜5
 
 ---
 
@@ -229,7 +229,7 @@ Phase 1（基盤・収集） → Phase 2（要約） → Phase 3（配信） →
 
 ## 6. 参照
 
-- `docs/REQUIREMENTS.md` — 要求定義書 v1.2
+- `docs/REQUIREMENTS.md` — 要求定義書 v1.4
 - `docs/SDD.md` — C4 設計ドキュメント（トレーサビリティ含む）
 - `STRUCTURE.md` — ディレクトリ構成
 - `.knowledge/graph.json` — ローカルナレッジグラフ（6 エンティティ）

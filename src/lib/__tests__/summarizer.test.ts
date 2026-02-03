@@ -182,12 +182,11 @@ describe("Summarizer Service", () => {
 
       const jobRunId = "job-run-1";
 
-      // 3回失敗してから成功しない（4回目も失敗）
+      // 合計3回試行してすべて失敗
       mockCreate
         .mockRejectedValueOnce(new Error("API Error 1"))
         .mockRejectedValueOnce(new Error("API Error 2"))
-        .mockRejectedValueOnce(new Error("API Error 3"))
-        .mockRejectedValueOnce(new Error("API Error 4"));
+        .mockRejectedValueOnce(new Error("API Error 3"));
 
       const promise = summarizeArticles([article], jobRunId);
       // タイマーを進めてリトライを完了させる
@@ -198,7 +197,7 @@ describe("Summarizer Service", () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].articleId).toBe(article.id);
       expect(result.errors[0].error).toContain("Failed to generate summary");
-      expect(mockCreate).toHaveBeenCalledTimes(4); // 初回 + 3回リトライ
+      expect(mockCreate).toHaveBeenCalledTimes(3); // 合計3回試行（TSK-REV-011）
     });
 
     it("2回目のリトライで成功する", async () => {
@@ -229,8 +228,9 @@ describe("Summarizer Service", () => {
         },
       };
 
-      // 1回目失敗、2回目成功
+      // 1回目・2回目失敗、3回目成功（合計3回試行）
       mockCreate
+        .mockRejectedValueOnce(new Error("API Error"))
         .mockRejectedValueOnce(new Error("API Error"))
         .mockResolvedValue(mockResponse as any);
 
@@ -244,7 +244,7 @@ describe("Summarizer Service", () => {
 
       expect(result.articlesSummarized).toBe(1);
       expect(result.errors).toHaveLength(0);
-      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(mockCreate).toHaveBeenCalledTimes(3); // 合計3回試行（TSK-REV-011）
     });
   });
 

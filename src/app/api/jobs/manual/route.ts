@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hasRunningJob, runDailyJob } from "@/lib/cron-handler";
+import { hasRunningJob, isJobInCooldown, runDailyJob } from "@/lib/cron-handler";
 
 /** POST /api/jobs/manual — 日次ジョブ手動実行 (REQ-JOB-001, SDD 9.7) */
 export async function POST(request: NextRequest) {
@@ -25,6 +25,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { status: "skipped", reason: "Job already running" },
       { status: 409 }
+    );
+  }
+
+  const cooldown = await isJobInCooldown();
+  if (cooldown.inCooldown) {
+    return NextResponse.json(
+      {
+        status: "skipped",
+        reason: "Job cooldown",
+        remainingSeconds: cooldown.remainingSeconds,
+      },
+      { status: 429 }
     );
   }
 

@@ -8,11 +8,15 @@ import pLimit from "p-limit";
 // @ts-expect-error sanitize-html has no types
 import sanitizeHtml from "sanitize-html";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import type { Source } from "@prisma/client";
 
 const CONCURRENT_SOURCES = 3; // REQ-SCR-010: 最大3ソース並列
 const DELAY_MS_PER_ORIGIN = 1200; // REQ-SEC-004: 同一オリジン間の間隔（ミリ秒）
 const USER_AGENT = "WebInvestigation/1.0 (+https://github.com/web-investigation)";
+// テスト用: ミニマムな条件で動作確認できるように記事数を制限
+const MAX_ARTICLE_URLS_PER_SOURCE = process.env.TEST_MODE === "true" ? 5 : 50; // テストモード時は5件、通常は50件
+const MAX_SCRAPE_TIME_MS = process.env.TEST_MODE === "true" ? 60000 : 300000; // テストモード時は60秒、通常は5分
 
 const originLastRequest = new Map<string, number>();
 
@@ -69,8 +73,9 @@ export async function isAllowedByRobotsTxt(url: string): Promise<boolean> {
       if (disallowMatch) {
         const disallowPath = disallowMatch[1].trim();
         if (!disallowPath) continue;
-        const pattern = disallowPath.replace(/\*/g, ".*");
-        const re = new RegExp(`^${pattern}`);
+        // ReDoS 対策: 正規表現の特殊文字をエスケープし、* のみ .* に解釈（CODE_REVIEW §4.3）
+        const escaped = disallowPath.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+        const re = new RegExp(`^${escaped}`);
         if (re.test(path)) return false;
       }
     }
@@ -78,6 +83,20 @@ export async function isAllowedByRobotsTxt(url: string): Promise<boolean> {
   } catch {
     return true; // エラー時は許可（ログは呼び出し元で）
   }
+}
+
+/** Source.config (Json) を型安全にパース（CODE_REVIEW §6.3） */
+function parseSourceConfig(
+  config: unknown
+): { listLinkSelector?: string; articleUrlPattern?: string } | null {
+  if (config == null || typeof config !== "object") return null;
+  const c = config as Record<string, unknown>;
+  return {
+    listLinkSelector:
+      typeof c.listLinkSelector === "string" ? c.listLinkSelector : undefined,
+    articleUrlPattern:
+      typeof c.articleUrlPattern === "string" ? c.articleUrlPattern : undefined,
+  };
 }
 
 /** HTML をサニタイズ (REQ-SEC-006) */
@@ -190,7 +209,7 @@ export async function scrapeSource(source: Source): Promise<{
   const errors: string[] = [];
   let collected = 0;
   const sourceId = source.id;
-  const config = source.config as { listLinkSelector?: string; articleUrlPattern?: string } | null;
+  const config = parseSourceConfig(source.config);
 
   try {
     const allowed = await isAllowedByRobotsTxt(source.url);
@@ -199,7 +218,7 @@ export async function scrapeSource(source: Source): Promise<{
       return { collected: 0, errors };
     }
   } catch (e) {
-    console.warn("[scraper] robots.txt check failed", source.url, e);
+    logger.warn("robots.txt check failed", { url: source.url, error: e instanceof Error ? e.message : String(e) });
     // 続行
   }
 
@@ -209,6 +228,11 @@ export async function scrapeSource(source: Source): Promise<{
   } else {
     try {
       articleUrls = await getArticleUrlsFromList(source.url, config);
+      // パフォーマンス向上のため、記事数を制限
+      if (articleUrls.length > MAX_ARTICLE_URLS_PER_SOURCE) {
+        logger.info("Limiting articles per source", { count: articleUrls.length, max: MAX_ARTICLE_URLS_PER_SOURCE, url: source.url });
+        articleUrls = articleUrls.slice(0, MAX_ARTICLE_URLS_PER_SOURCE);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       errors.push(`${source.url}: ${msg}`);
@@ -219,6 +243,19 @@ export async function scrapeSource(source: Source): Promise<{
   const contentSelector = source.selector || undefined;
   const now = new Date();
 
+  // sourceIdが有効か確認（削除されたソースの可能性があるため）
+  let validSourceId: string | null = sourceId;
+  if (sourceId) {
+    const sourceExists = await prisma.source.findUnique({
+      where: { id: sourceId },
+      select: { id: true },
+    });
+    if (!sourceExists) {
+      logger.warn("Source not found, using null for sourceId", { sourceId });
+      validSourceId = null;
+    }
+  }
+
   for (const url of articleUrls) {
     try {
       const { title, rawContent } = await fetchArticleContent(url, contentSelector);
@@ -228,7 +265,7 @@ export async function scrapeSource(source: Source): Promise<{
           url,
           title: title || null,
           rawContent,
-          sourceId,
+          sourceId: validSourceId,
           collectedAt: now,
         },
         update: {
@@ -242,7 +279,7 @@ export async function scrapeSource(source: Source): Promise<{
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       errors.push(`${url}: ${msg}`);
-      console.warn("[scraper] article fetch failed", url, e);
+      logger.warn("article fetch failed", { url, error: msg });
     }
   }
 
@@ -257,6 +294,7 @@ export type ScrapeAllResult = {
 
 /** 全ソースを並列制限付きでスクレイプ (REQ-SCR-002, REQ-SCR-009, REQ-SCR-010, REQ-SCR-004) */
 export async function scrapeAll(sources: Source[]): Promise<ScrapeAllResult> {
+  const startTime = Date.now();
   const limit = pLimit(CONCURRENT_SOURCES);
   const sourceResults: ScrapeAllResult["sourceResults"] = [];
   const allErrors: ScrapeAllResult["allErrors"] = [];
@@ -264,17 +302,34 @@ export async function scrapeAll(sources: Source[]): Promise<ScrapeAllResult> {
 
   const tasks = sources.map((source) =>
     limit(async () => {
-      const { collected, errors } = await scrapeSource(source);
-      sourceResults.push({
-        sourceId: source.id,
-        sourceUrl: source.url,
-        collected,
-        errors,
-      });
-      totalCollected += collected;
-      errors.forEach((message) =>
-        allErrors.push({ sourceUrl: source.url, message })
-      );
+      // タイムアウトチェック
+      if (Date.now() - startTime > MAX_SCRAPE_TIME_MS) {
+        allErrors.push({
+          sourceUrl: source.url,
+          message: `Scraping timeout: exceeded ${MAX_SCRAPE_TIME_MS}ms`,
+        });
+        return;
+      }
+
+      try {
+        const { collected, errors } = await scrapeSource(source);
+        sourceResults.push({
+          sourceId: source.id,
+          sourceUrl: source.url,
+          collected,
+          errors,
+        });
+        totalCollected += collected;
+        errors.forEach((message) =>
+          allErrors.push({ sourceUrl: source.url, message })
+        );
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        allErrors.push({
+          sourceUrl: source.url,
+          message: `Scraping failed: ${errorMessage}`,
+        });
+      }
     })
   );
 

@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma, SourceType } from "@prisma/client";
-
-function isValidUrl(s: string): boolean {
-  try {
-    new URL(s);
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { isValidUrl } from "@/lib/validation";
 
 type RouteContext = { params: Promise<{ id: string }> };
 

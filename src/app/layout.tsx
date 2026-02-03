@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import '@/app/globals.css';
+import { Nav } from '@/components/layout/nav';
 
 export const metadata: Metadata = {
   title: 'Web Investigation - 生産技術×デジタル',
@@ -13,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <Nav />
+        <main className="container mx-auto px-4 py-8">{children}</main>
+      </body>
     </html>
   );
 }

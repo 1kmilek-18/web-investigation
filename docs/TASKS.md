@@ -1,8 +1,8 @@
-# Web Investigation タスク分解書
+# Web Investigation タスク管理・分解書
 
 **作成日:** 2026-02-02  
-**更新日:** 2026-02-02  
-**参照:** docs/REQUIREMENTS.md v1.4, docs/SDD.md v1.1, docs/PROJECT_STATUS.md v1.0  
+**更新日:** 2026-02-03  
+**参照:** docs/REQUIREMENTS.md v1.5, docs/SDD.md v1.1, docs/PROJECT_STATUS.md, docs/CODE_REVIEW.md, docs/TASK_PLAN_CODE_REVIEW.md, docs/REQUIREMENTS_REVIEW_REV014_022.md  
 **Sprint期間:** 5日間（1日6時間の生産的コーディング）
 
 ---
@@ -12,11 +12,31 @@
 | フェーズ | 状態 | 進捗率 |
 |---------|------|--------|
 | **Phase 1: 基盤・収集** | ✅ 完了 | 100% |
-| **Phase 2: 要約** | ⏳ 未着手 | 0% |
-| **Phase 2.5: Settings API** | ⏳ 未着手 | 0% |
-| **Phase 3: 配信** | ⏳ 未着手 | 0% |
+| **Phase 2: 要約** | ✅ 完了 | 100% |
+| **Phase 2.5: Settings API** | ✅ 完了 | 100% |
+| **Phase 3: 配信** | ⏳ 要確認（email-sender 実装あり） | — |
 | **Phase 4: Web UI** | ⏳ 未着手 | 0% |
 | **Phase 5: 運用強化** | ⏳ 未着手 | 0% |
+| **コードレビュー対応（初回）** | ✅ 完了 | TSK-REV-001～013 完了 |
+| **コードレビュー未対応分** | ⏳ 未着手 | TSK-REV-014～022 |
+
+---
+
+## 🗂 全体の残タスクと実行順序
+
+タスク関連は本ファイルで一括管理する。残りは次の **4 ブロック**。
+
+| 順序 | ブロック | タスク | 見積 | 参照 |
+|------|----------|--------|------|------|
+| **1** | コードレビュー対応（初回） | TSK-REV-001 ～ 013 | ✅ 完了 | 本ドキュメント §コードレビュー対応 |
+| **2** | コードレビュー未対応分 | TSK-REV-014 ～ 022 | 約 14h（P0+P2+軽微は 1～2日、P3 残は別計画） | §コードレビュー未対応分 |
+| **3** | Phase 3 の確定 | 実装確認 or TSK-EML-001～007 | 0.5～2日 | §Phase 3 |
+| **4** | Phase 4: Web UI | TSK-UI-001 ～ 009 | 約 27h（5日） | §Phase 4 |
+| **5** | Phase 5: 運用強化 | TSK-MET-001, 002 | 約 5h（1日） | §Phase 5 |
+
+**残工数目安**: コードレビュー未対応分（P0 即時推奨）約 14h。Phase 3 を未実装とみなす場合 約 77h（14～15日）。Phase 3 実装済みなら 約 58h（10～11日）。
+
+**参照**: コードレビュー対応の詳細・スプリント配分は `docs/TASK_PLAN_CODE_REVIEW.md` を参照。
 
 ---
 
@@ -57,6 +77,165 @@
 | Day 3 | TSK-UI-005, TSK-UI-006 | 6h | 18h |
 | Day 4 | TSK-UI-007, TSK-UI-008 | 6h | 24h |
 | Day 5 | TSK-UI-009, バッファ・統合テスト | 6h | 30h |
+
+### Sprint コードレビュー対応（5日間、約26時間）
+
+**目標:** セキュリティ・設計・保守性のエンハンス（CODE_REVIEW 対応）
+
+| 日 | タスク | 時間 | 累計 |
+|---|--------|------|------|
+| Day 1 | TSK-REV-001, TSK-REV-002, TSK-REV-003（着手） | 5h | 5h |
+| Day 2 | TSK-REV-003（完了）, TSK-REV-004, TSK-REV-005, TSK-REV-006 | 5h | 10h |
+| Day 3 | TSK-REV-007, TSK-REV-008, TSK-REV-009, TSK-REV-010 | 5h | 15h |
+| Day 4 | TSK-REV-011, TSK-REV-012, TSK-REV-013 | 3h | 18h |
+| Day 5 | 統合・回帰・バッファ | 6h | 24h |
+
+**詳細**: `docs/TASK_PLAN_CODE_REVIEW.md` 参照。
+
+### Sprint コードレビュー未対応分（P0 即時 + P2/P3、約 14h）
+
+**目標:** REQ-REV-014～022 の対応（ビルド可能化・型安全・コード品質）。REQUIREMENTS.md §2.10 参照。
+
+| 日 | タスク | 時間 | 累計 |
+|---|--------|------|------|
+| Day 1 | TSK-REV-014（P0: ビルド環境） | 3～4h | 4h |
+| Day 1 または 2 | TSK-REV-015, TSK-REV-016（P2） | 2h | 6h |
+| Day 2 | TSK-REV-017, TSK-REV-018, TSK-REV-019（P3 軽微） | 1h | 7h |
+| 別スプリント | TSK-REV-020～022（P3: ログ・テスト） | 工数に応じて計画 | — |
+
+**受け入れ基準・詳細**: 本ドキュメント §コードレビュー未対応分、`docs/TASK_PLAN_CODE_REVIEW.md` §未対応分 参照。
+
+---
+
+## 📋 コードレビュー対応タスク（TSK-REV-xxx）
+
+**参照:** docs/CODE_REVIEW.md, docs/TASK_PLAN_CODE_REVIEW.md
+
+| ID | タイトル | 時間 | カテゴリ | 設計参照 |
+|----|----------|------|----------|----------|
+| TSK-REV-001 | メールテンプレートの HTML エスケープ（XSS対策） | 2h | Core | CODE_REVIEW §4.1 |
+| TSK-REV-002 | POST /api/articles に CRON_SECRET 認証追加 | 1h | Core | §4.2 |
+| TSK-REV-003 | Settings シングルトンの upsert 化 | 2.5h | Core | §5.1 |
+| TSK-REV-004 | 日次ジョブのタイムゾーン明示（JST） | 2h | Core | §5.2 |
+| TSK-REV-005 | robots.txt パースの ReDoS 対策 | 1h | Core | §4.3 |
+| TSK-REV-006 | isValidUrl の共通化 | 1h | Core | §6.1 |
+| TSK-REV-007 | Settings API の zod バリデーション導入 | 2h | Core | §6.2 |
+| TSK-REV-008 | cron-handler の dynamic → static import | 0.5h | Core | §5.3 |
+| TSK-REV-009 | scraper の Source.config 型ガード | 1.5h | Core | §6.3 |
+| TSK-REV-010 | nodemailer transporter のシングルトン化 | 1h | Core | §5.4 |
+| TSK-REV-011 | リトライ回数の統一とコメント | 0.5h | Core | §6.4 |
+| TSK-REV-012 | Vitest カバレッジ設定の追加 | 0.5h | Setup | §7.3 |
+| TSK-REV-013 | テスト修正・ドキュメント更新 | 2h | Testing/Doc | 全体 |
+
+**受け入れ基準・詳細**: `docs/TASK_PLAN_CODE_REVIEW.md` 参照。上記一覧は TASK_PLAN および CODE_REVIEW と整合済み（2026-02-03 確認）。
+
+---
+
+## 📋 コードレビュー未対応分タスク（TSK-REV-014～022）
+
+**参照:** docs/REQUIREMENTS.md §2.10, docs/CODE_REVIEW.md §6–7, docs/REQUIREMENTS_REVIEW_REV014_022.md
+
+| ID | タイトル | 時間 | カテゴリ | 要件参照 |
+|----|----------|------|----------|----------|
+| TSK-REV-014 | ビルド環境・File/Blob（Node 20+ または instrumentation） | 3～4h | Setup | REQ-REV-014（P0） |
+| TSK-REV-015 | Next.js / @next/swc バージョン一致 | 0.5～1h | Setup | REQ-REV-015（P2） |
+| TSK-REV-016 | JobRun errors の型安全な永続化（as object 解消） | 1～1.5h | Core | REQ-REV-016（P2） |
+| TSK-REV-017 | シングルトン／キャッシュのテスト用リセット | 0.5h | Core | REQ-REV-017（P3） |
+| TSK-REV-018 | デッドモックの削除 | 0.25h | Testing | REQ-REV-018（P3） |
+| TSK-REV-019 | 未使用 import の削除 | 0.25h | Core | REQ-REV-019（P3） |
+| TSK-REV-020 | 構造化ログ導入 | 3～4h | Core | REQ-REV-020（P3） |
+| TSK-REV-021 | フロントエンドテスト追加 | 6h+ | Testing | REQ-REV-021（P3） |
+| TSK-REV-022 | API ルート統合テスト追加 | 3～4h | Testing | REQ-REV-022（P3） |
+
+### TSK-REV-014: ビルド環境・File/Blob（P0）
+
+| 項目 | 内容 |
+|------|------|
+| **説明** | Node.js 18 等で `File` 未定義により `next build` が失敗する問題を解消する。Node.js 20+ への昇格、または `instrumentation.ts` で polyfill を適用する。採用方針に応じて package.json の engines や README を更新する。 |
+| **見積時間** | 3～4h（Node 20+ なら 1～2h、instrumentation なら 3～4h） |
+| **依存関係** | なし |
+| **設計参照** | CODE_REVIEW §6.1, REQ-REV-014 |
+| **受け入れ基準** | (1) 対象ランタイムで `next build` が成功する。(2) `/api/cron/daily` 等の API ルートがビルド時にエラーにならない。(3) Node 20+ または instrumentation 採用の旨をドキュメントに記載する。 |
+
+### TSK-REV-015: Next.js / @next/swc バージョン一致（P2）
+
+| 項目 | 内容 |
+|------|------|
+| **説明** | `next build` 時の @next/swc バージョン不一致警告を解消する。package.json / lockfile で Next.js と @next/swc のバージョンを整合させる。 |
+| **見積時間** | 0.5～1h |
+| **依存関係** | なし |
+| **設計参照** | CODE_REVIEW §6.2, REQ-REV-015 |
+| **受け入れ基準** | (1) `next build` 実行時に @next/swc のバージョン不一致警告が出ない。(2) package.json / lockfile で Next.js と @next/swc のバージョンが整合している。 |
+
+### TSK-REV-016: JobRun errors の型安全な永続化（P2）
+
+| 項目 | 内容 |
+|------|------|
+| **説明** | `src/lib/cron-handler.ts` 内で JobRun.errors に書き込む 5 箇所の `as object` を排除し、Prisma.InputJsonValue または専用ヘルパー（例: toJsonErrors）で型安全に変換する。 |
+| **見積時間** | 1～1.5h |
+| **依存関係** | なし |
+| **設計参照** | CODE_REVIEW §6.3, REQ-REV-016 |
+| **受け入れ基準** | (1) cron-handler 内で JobRun.errors に書き込む箇所で未チェックの `as object` を使用していない。(2) Prisma.InputJsonValue または専用ヘルパーで型安全に変換している。(3) 既存の cron-handler テストが通る。 |
+
+### TSK-REV-017: シングルトン／キャッシュのテスト用リセット（P3）
+
+| 項目 | 内容 |
+|------|------|
+| **説明** | `src/lib/email-sender.ts` の cachedTransporter をテスト間でクリアするため、テスト用のリセット関数（例: _resetTransporter）をエクスポートする。本番では未使用でよい。 |
+| **見積時間** | 0.5h |
+| **依存関係** | なし |
+| **設計参照** | CODE_REVIEW §6.4, REQ-REV-017 |
+| **受け入れ基準** | (1) テスト用のリセット関数がエクスポートされている、または同等の手段でテスト間の状態をクリアできる。(2) 既存の email-sender テストが通る。 |
+
+### TSK-REV-018: デッドモックの削除（P3）
+
+| 項目 | 内容 |
+|------|------|
+| **説明** | `src/lib/__tests__/cron-handler.test.ts` 内で使用されていない findFirst のモック定義を削除する。実際に使用されているのは findUnique。 |
+| **見積時間** | 0.25h |
+| **依存関係** | なし |
+| **設計参照** | CODE_REVIEW §6.5, REQ-REV-018 |
+| **受け入れ基準** | (1) cron-handler テスト内で findFirst 等の未使用モックが削除されている。(2) 全テストがパスする。 |
+
+### TSK-REV-019: 未使用 import の削除（P3）
+
+| 項目 | 内容 |
+|------|------|
+| **説明** | `src/lib/email-sender.ts` から未使用の EmptySendBehavior の import を削除する。 |
+| **見積時間** | 0.25h |
+| **依存関係** | なし |
+| **設計参照** | CODE_REVIEW §6.6, REQ-REV-019 |
+| **受け入れ基準** | (1) email-sender 等、指摘されたファイルから未使用 import（例: EmptySendBehavior）が削除されている。(2) ビルド・テストが通る。 |
+
+### TSK-REV-020: 構造化ログ導入（P3）
+
+| 項目 | 内容 |
+|------|------|
+| **説明** | console.log/console.error の代わりに構造化ログ（例: pino）を導入し、重要なエラー・イベントにレベル・メッセージ・コンテキストを付与する。REQ-NFR-004 と矛盾しない範囲で実施する。 |
+| **見積時間** | 3～4h |
+| **依存関係** | なし（Phase 5 でまとめて実施する方針も可） |
+| **設計参照** | CODE_REVIEW §7（旧6.5）, REQ-REV-020 |
+| **受け入れ基準** | (1) 重要なエラー・イベントが構造化ログ（レベル・メッセージ・コンテキスト）で出力される。(2) 既存の REQ-NFR-004 と矛盾しない。 |
+
+### TSK-REV-021: フロントエンドテスト追加（P3）
+
+| 項目 | 内容 |
+|------|------|
+| **説明** | クリティカルな UI フロー（例: ソース一覧表示、設定保存）に @testing-library/react によるテストを追加する。Phase 4 完了後にスコープを定義して実施する方針も可。 |
+| **見積時間** | 6h+ |
+| **依存関係** | Phase 4 Web UI の実装（スコープによる） |
+| **設計参照** | CODE_REVIEW §7.1, REQ-REV-021 |
+| **受け入れ基準** | (1) 主要画面またはクリティカルフローに @testing-library/react 等によるテストが存在する。(2) 既存テストが通る。 |
+
+### TSK-REV-022: API ルート統合テスト追加（P3）
+
+| 項目 | 内容 |
+|------|------|
+| **説明** | settings 等の API ルートに対し、不正 body・認証欠如等のエッジケースをカバーする統合テストを追加する。 |
+| **見積時間** | 3～4h |
+| **依存関係** | なし |
+| **設計参照** | CODE_REVIEW §7.2, REQ-REV-022 |
+| **受け入れ基準** | (1) 少なくとも settings 等の API で不正 body・認証欠如等の統合テストが存在する。(2) 既存テストが通る。 |
 
 ---
 
@@ -431,6 +610,9 @@
 ## 📊 タスク依存関係グラフ
 
 ```
+コードレビュー対応
+TSK-REV-001 ～ TSK-REV-012（並行可能） → TSK-REV-013
+
 Phase 2: 要約
 TSK-SUM-001 → TSK-SUM-002 → TSK-SUM-003
                       ↓
@@ -468,8 +650,8 @@ TSK-UI-001〜008 → TSK-UI-009
 
 | 優先度 | タスク | 理由 |
 |--------|--------|------|
-| **P0 (Critical)** | TSK-SUM-001〜005, TSK-SET-001〜002, TSK-EML-001〜007 | Phase 2, 2.5, 3のコア機能 |
-| **P1 (High)** | TSK-SUM-006〜009, TSK-UI-001〜009 | コスト管理、Web UI |
+| **P0 (Critical)** | TSK-REV-001〜003（セキュリティ・データ整合性）, TSK-SUM-001〜005, TSK-SET-001〜002, TSK-EML-001〜007 | コードレビューP0、Phase 2, 2.5, 3のコア機能 |
+| **P1 (High)** | TSK-REV-004〜013, TSK-SUM-006〜009, TSK-UI-001〜009 | コードレビューP1/P2、コスト管理、Web UI |
 | **P2 (Medium)** | TSK-MET-001〜002 | 運用強化（Phase 5） |
 
 ---
@@ -486,5 +668,20 @@ TSK-UI-001〜008 → TSK-UI-009
 
 ---
 
-**最終更新:** 2026-02-02  
+## 📚 参照ドキュメント（タスク関連）
+
+| ドキュメント | 用途 |
+|-------------|------|
+| **docs/TASKS.md**（本ファイル） | タスク一括管理・残タスク・スプリント・優先度 |
+| docs/REQUIREMENTS.md（v1.4） | 本番要件 SoT（REQ-SCR, SUM, EML, UI, SET 等） |
+| docs/TASK_PLAN_CODE_REVIEW.md | コードレビュー対応の詳細・受け入れ基準・日別配分 |
+| docs/SDD_TASK_DECOMPOSITION_CODE_REVIEW.md | コードレビュー対応の分解・スコープ方針 |
+| docs/REQUIREMENTS_REVIEW_CODE_REVIEW.md | コードレビュー対応の要件（REQ-REV-xxx） |
+| docs/PROJECT_STATUS.md | フェーズ別進捗・完了済み一覧 |
+| docs/CODE_REVIEW.md | レビュー指摘・改善優先度 |
+| docs/REQUIREMENTS_AND_TASKS_AUDIT.md | 要件・タスク総点検レポート |
+
+---
+
+**最終更新:** 2026-02-03  
 **次回更新予定:** Sprint完了時、またはタスク変更発生時

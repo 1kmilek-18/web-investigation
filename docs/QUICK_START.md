@@ -1,178 +1,154 @@
-# Phase 2 要約機能 クイックスタート
+# Web Investigation クイックスタートガイド
 
-**作成日:** 2026-02-02
+## 🚀 起動方法
 
----
+開発サーバーは既に起動しています。ブラウザで以下にアクセスしてください：
 
-## 🚀 動作確認の手順（3ステップ）
+**http://localhost:3000**
 
-### ステップ1: 開発サーバーを起動
+## 📋 使い方
 
-**ターミナル1**で以下を実行:
+### 1. ホーム画面
+
+トップページから各機能にアクセスできます：
+- **記事一覧**: 収集された記事を閲覧・検索
+- **ソース設定**: 収集対象のWebサイトを管理
+- **配信設定**: メール配信の設定を変更
+
+### 2. ソース設定（初回セットアップ必須）
+
+1. **ソース設定**ページに移動
+2. **ソースを追加**ボタンをクリック
+3. 以下を入力：
+   - **URL**: 収集したいWebサイトのURL
+   - **タイプ**: 
+     - `単一記事URL`: 1つの記事ページのURL
+     - `一覧ページURL`: 複数の記事が一覧になっているページのURL
+   - **CSSセレクタ**（オプション）: 記事本文を抽出するCSSセレクタ
+
+**例:**
+- 単一記事: `https://example.com/article/123`
+- 一覧ページ: `https://example.com/articles`
+
+### 3. 配信設定（初回セットアップ必須）
+
+1. **配信設定**ページに移動
+2. 以下を設定：
+   - **配信時刻**: 日次ジョブの実行時刻（例: 09:00）
+   - **受信メールアドレス**: メールを受け取るアドレス
+   - **0件時の動作**: 
+     - `メールを送信しない`: 新規記事がない場合はメールを送らない
+     - `通知メールを送信`: 新規記事がない場合も通知メールを送る
+   - **コスト管理**（オプション）:
+     - 月次コスト上限: Claude APIの使用料上限（USD）
+     - 警告閾値: 上限の何%で警告するか（0〜1）
+
+3. **設定を保存**ボタンをクリック
+
+### 4. メール送信のテスト
+
+メールが届かない場合は、まず送信テストで設定を確認してください：
 
 ```bash
-cd /home/kmilek/dev-env/web-investigation
-npm run dev
+curl -X POST http://localhost:3000/api/test-email \
+  -H "Authorization: Bearer YOUR_CRON_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{}'
 ```
 
-**成功すると以下のように表示されます:**
-```
-   ▲ Next.js 15.5.11
-   - Local:        http://localhost:3000
-   - Environments: .env
+- 成功時: 設定済みの受信アドレスにテストメールが送信されます
+- 失敗時: 診断情報（GMAIL_USER/GMAIL_APP_PASSWORD の設定状況など）が返ります
+- **迷惑メールフォルダも必ず確認**してください（Gmail→Yahoo などはフィルタされやすいです）
 
- ✓ Starting...
- ✓ Ready in 2.5s
-```
+### 5. 手動ジョブ実行（テスト用）
 
-**このターミナルは開いたままにしておいてください**（ログがここに表示されます）
-
----
-
-### ステップ2: 動作確認スクリプトを実行
-
-**新しいターミナル（ターミナル2）**を開いて以下を実行:
+API経由で手動ジョブを実行できます：
 
 ```bash
-cd /home/kmilek/dev-env/web-investigation
-node scripts/verify-summarization.mjs
+curl -X POST http://localhost:3000/api/jobs/manual \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
----
+**注意**: `CRON_SECRET`環境変数を設定する必要があります。
 
-### ステップ3: ログを確認
+### 6. 記事の閲覧
 
-**ターミナル1（開発サーバー）**に以下のようなログが表示されます:
+1. **記事一覧**ページに移動
+2. 検索・フィルタ機能を使用：
+   - **キーワード検索**: タイトル・要約で検索
+   - **日付範囲**: 開始日・終了日で絞り込み
+3. 記事をクリックして詳細を表示
 
-#### ✅ 正常系の場合
+## ⚙️ 環境変数の設定
 
-```
-[runDailyJob] Checking cost limits...
-[runDailyJob] Cost check result: allowed=true, currentCost=0.1, limit=10
-[runDailyJob] Searching for articles with summary=null...
-[runDailyJob] Found 1 articles to summarize
-[runDailyJob] Starting summarization for 1 articles...
-[summarizeArticles] Starting summarization for 1 articles (max 5 concurrent)
-[summarizeSingleArticle] Attempting to summarize article ... (attempt 1/4)
-[summarizeArticles] Successfully summarized article ...
-[summarizeArticles] Completed: 1/1 articles summarized successfully
-[runDailyJob] Summarization completed: 1/1 articles summarized successfully
-```
+`.env`ファイルに以下を設定してください：
 
-#### ⚠️ エラーが発生した場合
-
-```
-[summarizeSingleArticle] Attempt 1/4 failed for article ...: {
-  message: "エラーメッセージ",
-  name: "Error"
-}
-```
-
-**エラーメッセージをコピーして、原因を特定します**
-
----
-
-## 🔍 よくあるエラーと対処法
-
-### エラー: "開発サーバーが起動していないようです"
-
-**原因:** 開発サーバーが起動していない
-
-**対処:**
-1. **ターミナル1**で `npm run dev` を実行
-2. 「Ready in X.Xs」と表示されるまで待つ
-3. **ターミナル2**で再度 `node scripts/verify-summarization.mjs` を実行
-
----
-
-### エラー: "ANTHROPIC_API_KEY が設定されていません"
-
-**原因:** `.env` ファイルにAPIキーが設定されていない
-
-**対処:**
 ```bash
-# .env ファイルを確認
-cat .env | grep ANTHROPIC_API_KEY
+# データベース（必須）
+DATABASE_URL="postgresql://..."
 
-# 設定されていない場合は追加
-echo "ANTHROPIC_API_KEY=your-api-key-here" >> .env
+# Claude API（要約機能に必須）
+ANTHROPIC_API_KEY="sk-ant-..."
 
-# 開発サーバーを再起動（Ctrl+Cで停止してから再起動）
-npm run dev
+# Gmail送信（配信機能に必須）
+GMAIL_USER="your-app@gmail.com"
+GMAIL_APP_PASSWORD="your-16-char-app-password"
+
+# ジョブ実行認証（手動ジョブ実行に必須）
+CRON_SECRET="your-secret-key"
 ```
 
----
+### Gmailアプリパスワードの取得方法
 
-### エラー: "API key not found" または "401 Unauthorized"
+1. Googleアカウントで2段階認証を有効化
+2. https://myaccount.google.com/apppasswords にアクセス
+3. 「アプリを選択」→「その他（カスタム名）」を選択
+4. 名前を入力（例: "Web Investigation"）
+5. 生成された16文字のパスワードをコピーして`.env`に設定
 
-**原因:** APIキーが無効または間違っている
+## 🔍 動作確認の流れ
 
-**対処:**
-1. AnthropicのダッシュボードでAPIキーを確認
-2. 新しいAPIキーを生成
-3. `.env` ファイルを更新
-4. 開発サーバーを再起動
+1. **ソースを追加**
+   - テスト用のWebサイトURLを追加
 
----
+2. **配信設定を確認**
+   - 受信メールアドレスが設定されているか確認
 
-### エラー: "Failed to generate summary after retries"
+3. **手動ジョブを実行**
+   - API経由でジョブを実行して動作確認
 
-**原因:** Claude APIの呼び出しが4回連続で失敗
+4. **記事を確認**
+   - 記事一覧ページで収集された記事を確認
+   - 要約が生成されているか確認
 
-**対処:**
-1. **ターミナル1（開発サーバー）**のログを確認
-2. エラーメッセージの内容を確認
-3. 上記のエラー対処法を参照
+5. **メール配信を確認**
+   - 設定したメールアドレスにメールが届くか確認
 
----
+## 🐛 トラブルシューティング
 
-## 📋 チェックリスト
+### データベース接続エラー
 
-動作確認前に以下を確認:
+- `.env`の`DATABASE_URL`が正しく設定されているか確認
+- Supabaseの接続文字列が正しいか確認
 
-- [ ] `.env` ファイルに `ANTHROPIC_API_KEY` が設定されている
-- [ ] `.env` ファイルに `CRON_SECRET` が設定されている
-- [ ] `.env` ファイルに `DATABASE_URL` が設定されている
-- [ ] 開発サーバーが起動している（`npm run dev`）
-- [ ] 開発サーバーが「Ready」状態になっている
+### 要約が生成されない
 
----
+- `ANTHROPIC_API_KEY`が設定されているか確認
+- Claude APIのクォータを確認
 
-## 🎯 成功の確認
+### メールが送信されない
 
-動作確認が成功すると:
+- `GMAIL_USER`と`GMAIL_APP_PASSWORD`が設定されているか確認
+- Gmailアプリパスワードが正しいか確認
+- 2段階認証が有効になっているか確認
 
-1. **ターミナル2（スクリプト）**に以下が表示される:
-   ```
-   ✅ 要約が生成されました！
-   要約内容:
-   ────────────────────────────────────────────────────────────────
-   [要約テキスト]
-   ────────────────────────────────────────────────────────────────
-   ```
+### ジョブが実行されない
 
-2. **ターミナル1（開発サーバー）**に以下が表示される:
-   ```
-   [summarizeArticles] Successfully summarized article ...
-   [summarizeArticles] Completed: 1/1 articles summarized successfully
-   ```
+- `CRON_SECRET`が設定されているか確認
+- 外部スケジューラ（crontab、Vercel Cron等）の設定を確認
 
-3. **ジョブ実行結果**に以下が含まれる:
-   ```json
-   {
-     "articlesSummarized": 1,
-     "articlesCollected": 0
-   }
-   ```
+## 📚 次のステップ
 
----
-
-## 💡 ヒント
-
-- **2つのターミナルを使う**: 1つは開発サーバー用、もう1つはスクリプト実行用
-- **ログは開発サーバーのターミナルで確認**: エラーはここに表示されます
-- **エラーが出たらログを確認**: エラーメッセージから原因を特定できます
-
----
-
-**最終更新:** 2026-02-02
+- Phase 5（運用強化）の実装
+- メトリクス・コスト管理UIの追加
+- 全文検索インデックスの実装

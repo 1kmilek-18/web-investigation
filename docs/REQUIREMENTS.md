@@ -1,9 +1,9 @@
 # Web Investigation 要求定義書
 
-**バージョン:** 1.4  
+**バージョン:** 1.5  
 **作成日:** 2026-02-02  
-**更新日:** 2026-02-02  
-**レビュー:** docs/REQUIREMENTS_REVIEW.md (2026-02-02)  
+**更新日:** 2026-02-03  
+**レビュー:** docs/REQUIREMENTS_REVIEW.md (2026-02-02), docs/CODE_REVIEW.md §6–7 (2026-02-03)  
 **対象:** 生産技術×デジタル 技術情報 収集・要約・メール配信システム
 
 ---
@@ -159,6 +159,101 @@
 | REQ-JOB-001 | Event-Driven | When the user triggers a manual run via Web UI or API, the system shall start the daily job as if triggered by the scheduler. |
 | REQ-JOB-002 | Event-Driven | When the user requests to stop a running job, the system shall gracefully stop after the current phase completes and shall not proceed to the next phase. |
 
+### 2.10 コードレビュー対応要件（未対応・新規検出）
+
+**出典:** docs/CODE_REVIEW.md §6–7（2026-02-03）。REQ-REV-001～013 は対応済み。以下は未対応項目を EARS 形式で要件化し、**影響度**と**対応可能性**で評価したもの。
+
+**影響度:** 高＝本番デプロイ／品質に直結、中＝保守性・安定性、低＝軽微な品質改善  
+**対応可能性:** 高＝工数小・リスク低、中＝要検証、低＝工数大または環境依存
+
+| ID | パターン | 優先度 | 要求 | 影響度 | 対応可能性 |
+|----|----------|--------|------|--------|------------|
+| REQ-REV-014 | Ubiquitous | P0 | The system shall build and deploy successfully in the target runtime (e.g. Node.js 20+ where `File`/`Blob` are defined, or with instrumentation/polyfill so that Next.js page-data collection does not fail with "File is not defined"). | 高（デプロイ不可） | 高（Node 20+ 推奨）／中（instrumentation） |
+| REQ-REV-015 | Ubiquitous | P2 | The system shall use a consistent version of Next.js and @next/swc (and related tooling) so that build and dev do not report version mismatch. | 中（ビルド安定性） | 高 |
+| REQ-REV-016 | Ubiquitous | P2 | When persisting JobRun errors (JSON column), the system shall use a type-safe representation (e.g. Prisma.InputJsonValue or a dedicated helper) and shall not rely on unchecked `as object` casts. | 中（型安全性） | 高 |
+| REQ-REV-017 | Ubiquitous | P3 | Where a singleton or module-level cache is used (e.g. nodemailer transporter), the system shall expose a test-only reset mechanism so that tests do not suffer from cross-test state. | 低（テスタビリティ） | 高 |
+| REQ-REV-018 | Ubiquitous | P3 | The system shall not retain dead mock definitions (e.g. findFirst when only findUnique is used); test fixtures shall match actual usage. | 低（コード品質） | 高 |
+| REQ-REV-019 | Ubiquitous | P3 | The system shall not retain unused imports (e.g. EmptySendBehavior when not referenced in the file). | 低（コード品質） | 高 |
+| REQ-REV-020 | Ubiquitous | P3 | The system shall use structured or designated logging (e.g. log levels, structured fields) for errors and important events instead of raw console.log/console.error where operational analysis is needed. | 中（運用性） | 中 |
+| REQ-REV-021 | Ubiquitous | P3 | The system shall include front-end tests (e.g. @testing-library/react) for critical UI flows where the dependency is already present. | 中（品質） | 低（工数大） |
+| REQ-REV-022 | Ubiquitous | P3 | The system shall include integration tests for API routes covering validation edge cases (e.g. invalid body, missing auth). | 中（品質） | 中 |
+
+#### REQ-REV-014: ビルド環境・File/Blob（P0）
+
+| 項目 | 内容 |
+|------|------|
+| **根拠** | Node.js 18 等で `File` 未定義のため `next build` のページデータ収集が失敗し、本番デプロイが不可になる。 |
+| **受け入れ基準** | (1) 対象ランタイムで `next build` が成功する。(2) `/api/cron/daily` 等の API ルートがビルド時にエラーにならない。(3) Node.js 20+ への昇格、または instrumentation 等の polyfill で対応した場合はその旨をドキュメントに記載する。 |
+
+#### REQ-REV-015: Next.js / @next/swc バージョン一致（P2）
+
+| 項目 | 内容 |
+|------|------|
+| **根拠** | バージョン不一致はビルドの不安定さや予期しない動作の原因となる。 |
+| **受け入れ基準** | (1) `next build` 実行時に @next/swc のバージョン不一致警告が出ない。(2) package.json / lockfile で Next.js と @next/swc のバージョンが整合している。 |
+
+#### REQ-REV-016: JobRun errors の型安全な永続化（P2）
+
+| 項目 | 内容 |
+|------|------|
+| **根拠** | `as object` キャストの残存は型安全性を損ない、将来のリファクタでバグの温床になりうる。 |
+| **既存参照** | REQUIREMENTS_REVIEW_CODE_REVIEW.md の BACKLOG-REV-3 を本要件に昇格。 |
+| **受け入れ基準** | (1) cron-handler 内で JobRun.errors に書き込む箇所で未チェックの `as object` を使用していない。(2) Prisma.InputJsonValue または専用ヘルパーで型安全に変換している。(3) 既存の cron-handler テストが通る。 |
+
+#### REQ-REV-017: シングルトン／キャッシュのテスト用リセット（P3）
+
+| 項目 | 内容 |
+|------|------|
+| **根拠** | モジュールスコープのキャッシュがテスト間で残ると、環境変数変更等のテストが不安定になる。 |
+| **受け入れ基準** | (1) テスト用のリセット関数（例: _resetTransporter）がエクスポートされている、または同等の手段でテスト間の状態をクリアできる。(2) 既存の email-sender テストが通る。 |
+
+#### REQ-REV-018: デッドモックの削除（P3）
+
+| 項目 | 内容 |
+|------|------|
+| **根拠** | 使用されていないモック定義は混乱とメンテコストを増やす。 |
+| **受け入れ基準** | (1) cron-handler テスト内で findFirst 等の未使用モックが削除されている。(2) 全テストがパスする。 |
+
+#### REQ-REV-019: 未使用 import の削除（P3）
+
+| 項目 | 内容 |
+|------|------|
+| **根拠** | 未使用 import はノイズとなり、静的解析やバンドルに不要な依存を残す。 |
+| **受け入れ基準** | (1) email-sender 等、指摘されたファイルから未使用 import（例: EmptySendBehavior）が削除されている。(2) ビルド・テストが通る。 |
+
+#### REQ-REV-020: 構造化ログ（P3）
+
+| 項目 | 内容 |
+|------|------|
+| **根拠** | 本番運用時のログ解析・監視をしやすくする。 |
+| **既存参照** | REQUIREMENTS_REVIEW_CODE_REVIEW.md の BACKLOG-REV-5。 |
+| **受け入れ基準** | (1) 重要なエラー・イベントが構造化ログ（レベル・メッセージ・コンテキスト）で出力される。(2) 既存の REQ-NFR-004 と矛盾しない。 |
+
+#### REQ-REV-021: フロントエンドテスト（P3）
+
+| 項目 | 内容 |
+|------|------|
+| **根拠** | クリティカルな UI フローのリグレッション防止。 |
+| **既存参照** | REQUIREMENTS_REVIEW_CODE_REVIEW.md の BACKLOG-REV-6。 |
+| **受け入れ基準** | (1) 主要画面またはクリティカルフローに @testing-library/react 等によるテストが存在する。(2) 既存テストが通る。 |
+
+#### REQ-REV-022: API ルート統合テスト（P3）
+
+| 項目 | 内容 |
+|------|------|
+| **根拠** | バリデーション・認証のエッジケースを自動検証する。 |
+| **既存参照** | REQUIREMENTS_REVIEW_CODE_REVIEW.md の BACKLOG-REV-7。 |
+| **受け入れ基準** | (1) 少なくとも settings 等の API で不正 body・認証欠如等の統合テストが存在する。(2) 既存テストが通る。 |
+
+#### 優先度・実施順序の目安
+
+| 優先度 | 要件 | 実施推奨 |
+|--------|------|----------|
+| P0 | REQ-REV-014 | 即時（デプロイ可能にするため） |
+| P2 | REQ-REV-015, REQ-REV-016 | 次のスプリント |
+| P3 | REQ-REV-017～019 | 軽微なためまとめて実施可 |
+| P3 | REQ-REV-020～022 | 工数に応じて計画に組み込む |
+
 ---
 
 ## 3. 非機能要件
@@ -277,6 +372,22 @@
 | **Phase 3: 配信** | 日次ジョブの完全化、メール送信、0件時設定。失敗時は通知メール送信。 | 1通まとめメール、失敗通知メール |
 | **Phase 4: Web UI** | ソース設定、配信設定、過去記事の閲覧・検索。 | 設定画面、記事一覧・検索・詳細 |
 | **Phase 5: 運用強化** | メトリクスの記録・参照、コスト確認の明文化（ドキュメントまたは簡易ダッシュボード）。 | メトリクステーブル・参照手段、Supabase/Claude利用量の確認方法 |
+
+---
+
+## 関連ドキュメント
+
+本要求定義書（REQ-xxx）は製品の機能・非機能要件の **Single Source of Truth** とする。
+
+| ドキュメント | 役割 |
+|-------------|------|
+| **docs/TASKS.md** | タスク一括管理（TSK-SUM, SET, EML, UI, MET, REV）。残タスク・スプリント・優先度。 |
+| **docs/SDD.md** | 設計・REQ とのトレーサビリティ。 |
+| **docs/CODE_REVIEW.md** | コードレビュー指摘・対応状況。§6–7 の未対応項目が REQ-REV-014～022 に反映。 |
+| **docs/REQUIREMENTS_REVIEW.md** | 本要件のレビュー結果（EARS・憲法条項）。 |
+| **docs/REQUIREMENTS_REVIEW_CODE_REVIEW.md** | コードレビュー対応の要件（REQ-REV-001～013 対応済み、REQ-REV-014～022 未対応）。 |
+| **docs/REQUIREMENTS_REVIEW_REV014_022.md** | §2.10（REQ-REV-014～022）の要件レビュー・今後の方針。 |
+| **docs/REQUIREMENTS_AND_TASKS_AUDIT.md** | 要件・タスクの総点検レポート。 |
 
 ---
 
